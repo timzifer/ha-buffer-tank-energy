@@ -1,0 +1,98 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tank-Dimensionen",
+        "description": "Konfiguriere die physischen Abmessungen deines Pufferspeichers.",
+        "data": {
+          "tank_volume": "Tankvolumen",
+          "tank_height": "Tankhöhe"
+        },
+        "data_description": {
+          "tank_volume": "Gesamtes Wasservolumen des Pufferspeichers in Litern.",
+          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern."
+        }
+      },
+      "sensors": {
+        "title": "Temperatursensoren",
+        "description": "Füge einen Temperatursensor zum Pufferspeicher hinzu. Bisher hinzugefügte Sensoren: {count}.",
+        "data": {
+          "sensor_entity": "Temperatursensor",
+          "sensor_position": "Sensorposition (vom Boden)",
+          "add_another": "Weiteren Sensor hinzufügen"
+        },
+        "data_description": {
+          "sensor_entity": "Wähle eine Temperatursensor-Entität aus.",
+          "sensor_position": "Höhe des Sensors gemessen vom Boden des Tanks in Millimetern.",
+          "add_another": "Aktiviere dies, um nach diesem einen weiteren Sensor hinzuzufügen."
+        }
+      },
+      "optional": {
+        "title": "Optionale Einstellungen",
+        "description": "Konfiguriere optionale Sensoren und Isolierungseigenschaften.",
+        "data": {
+          "return_temp_entity": "Rücklauftemperatur-Sensor",
+          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
+          "insulation_r_value": "Isolierung R-Wert"
+        },
+        "data_description": {
+          "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
+          "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
+          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen."
+        }
+      }
+    },
+    "error": {
+      "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
+      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tank-Dimensionen",
+        "description": "Aktualisiere die physischen Abmessungen deines Pufferspeichers.",
+        "data": {
+          "tank_volume": "Tankvolumen",
+          "tank_height": "Tankhöhe"
+        },
+        "data_description": {
+          "tank_volume": "Gesamtes Wasservolumen des Pufferspeichers in Litern.",
+          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern."
+        }
+      },
+      "sensors": {
+        "title": "Temperatursensoren",
+        "description": "Füge einen Temperatursensor zum Pufferspeicher hinzu. Bisher hinzugefügte Sensoren: {count}.",
+        "data": {
+          "sensor_entity": "Temperatursensor",
+          "sensor_position": "Sensorposition (vom Boden)",
+          "add_another": "Weiteren Sensor hinzufügen"
+        },
+        "data_description": {
+          "sensor_entity": "Wähle eine Temperatursensor-Entität aus.",
+          "sensor_position": "Höhe des Sensors gemessen vom Boden des Tanks in Millimetern.",
+          "add_another": "Aktiviere dies, um nach diesem einen weiteren Sensor hinzuzufügen."
+        }
+      },
+      "optional": {
+        "title": "Optionale Einstellungen",
+        "description": "Konfiguriere optionale Sensoren und Isolierungseigenschaften.",
+        "data": {
+          "return_temp_entity": "Rücklauftemperatur-Sensor",
+          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
+          "insulation_r_value": "Isolierung R-Wert"
+        },
+        "data_description": {
+          "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
+          "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
+          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen."
+        }
+      }
+    },
+    "error": {
+      "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
+      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten."
+    }
+  }
+}
