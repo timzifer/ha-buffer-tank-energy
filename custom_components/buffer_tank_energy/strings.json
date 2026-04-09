@@ -51,14 +51,16 @@
     "step": {
       "init": {
         "title": "Tank Dimensions",
-        "description": "Update the physical dimensions of your buffer tank.",
+        "description": "Update the physical dimensions of your buffer tank. Currently configured sensors: {sensor_count}.",
         "data": {
           "tank_volume": "Tank Volume",
-          "tank_height": "Tank Height"
+          "tank_height": "Tank Height",
+          "reconfigure_sensors": "Reconfigure sensors"
         },
         "data_description": {
           "tank_volume": "Total water volume of the buffer tank in liters.",
-          "tank_height": "Total height of the buffer tank in millimeters."
+          "tank_height": "Total height of the buffer tank in millimeters.",
+          "reconfigure_sensors": "Enable this to clear all existing sensors and set them up again. Leave unchecked to keep your current sensor configuration."
         }
       },
       "sensors": {
@@ -92,7 +94,8 @@
     },
     "error": {
       "min_two_sensors": "At least two temperature sensors are required.",
-      "position_exceeds_height": "Sensor position cannot exceed tank height."
+      "position_exceeds_height": "Sensor position cannot exceed tank height.",
+      "sensors_exceed_new_height": "Some existing sensor positions exceed the new tank height. Increase the height or enable 'Reconfigure sensors' to set up sensors again."
     }
   }
 }
