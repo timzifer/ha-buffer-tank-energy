@@ -13,6 +13,9 @@ CONF_SENSOR_POSITION = "sensor_position"  # mm from bottom
 CONF_RETURN_TEMP_ENTITY = "return_temp_entity"
 CONF_AMBIENT_TEMP_ENTITY = "ambient_temp_entity"
 CONF_INSULATION_R_VALUE = "insulation_r_value"  # m²·K/W
+CONF_MAX_TEMPERATURE = "max_temperature"  # °C (for SoC calculation)
+
+DEFAULT_MAX_TEMPERATURE = 80.0  # °C
 
 # Physics constants
 WATER_SPECIFIC_HEAT = 4.186  # kJ/(kg·K)

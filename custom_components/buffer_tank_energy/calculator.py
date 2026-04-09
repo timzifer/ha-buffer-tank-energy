@@ -158,6 +158,62 @@ def calculate_average_temperature(temperature_profile: list[float]) -> float | N
     return sum(temperature_profile) / len(temperature_profile)
 
 
+def calculate_max_energy(
+    geometry: TankGeometry,
+    max_temperature: float,
+    reference_temp: float,
+) -> float:
+    """Calculate the maximum storable energy at a given max temperature.
+
+    Args:
+        geometry: Tank geometry.
+        max_temperature: Maximum water temperature in celsius.
+        reference_temp: Reference temperature in celsius.
+
+    Returns:
+        Maximum energy in kWh.
+    """
+    delta_t = max_temperature - reference_temp
+    if delta_t <= 0:
+        return 0.0
+
+    total_mass = geometry.volume_m3 * WATER_DENSITY  # kg
+    total_energy_kj = total_mass * WATER_SPECIFIC_HEAT * delta_t
+    return total_energy_kj * KJ_TO_KWH
+
+
+def calculate_state_of_charge(
+    current_energy: float, max_energy: float
+) -> float | None:
+    """Calculate the state of charge as a percentage.
+
+    Args:
+        current_energy: Current stored energy in kWh.
+        max_energy: Maximum storable energy in kWh.
+
+    Returns:
+        State of charge in percent (0-100), or None if max_energy is zero.
+    """
+    if max_energy <= 0:
+        return None
+    soc = (current_energy / max_energy) * 100.0
+    return max(0.0, min(100.0, soc))
+
+
+def calculate_temperature_spread(temperature_profile: list[float]) -> float | None:
+    """Calculate the temperature spread (max - min) of the profile.
+
+    Args:
+        temperature_profile: List of layer temperatures.
+
+    Returns:
+        Temperature spread in celsius, or None if profile is empty.
+    """
+    if not temperature_profile:
+        return None
+    return max(temperature_profile) - min(temperature_profile)
+
+
 def determine_reference_temperature(
     return_temp: float | None,
     ambient_temp: float | None,

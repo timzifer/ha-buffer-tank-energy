@@ -21,12 +21,14 @@ from homeassistant.helpers.selector import (
 from .const import (
     CONF_AMBIENT_TEMP_ENTITY,
     CONF_INSULATION_R_VALUE,
+    CONF_MAX_TEMPERATURE,
     CONF_RETURN_TEMP_ENTITY,
     CONF_SENSOR_ENTITY,
     CONF_SENSOR_POSITION,
     CONF_SENSORS,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
+    DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
 )
 
@@ -158,6 +160,8 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._data[CONF_INSULATION_R_VALUE] = user_input[
                     CONF_INSULATION_R_VALUE
                 ]
+            if user_input.get(CONF_MAX_TEMPERATURE):
+                self._data[CONF_MAX_TEMPERATURE] = user_input[CONF_MAX_TEMPERATURE]
 
             return self.async_create_entry(
                 title=f"Buffer Tank ({self._data[CONF_TANK_VOLUME]}L)",
@@ -184,6 +188,17 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
                         max=20.0,
                         step=0.1,
                         unit_of_measurement="m²·K/W",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_MAX_TEMPERATURE, default=DEFAULT_MAX_TEMPERATURE
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=30,
+                        max=100,
+                        step=1,
+                        unit_of_measurement="°C",
                         mode=NumberSelectorMode.BOX,
                     )
                 ),
@@ -340,6 +355,9 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
             self._data[CONF_INSULATION_R_VALUE] = user_input.get(
                 CONF_INSULATION_R_VALUE
             )
+            self._data[CONF_MAX_TEMPERATURE] = user_input.get(
+                CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE
+            )
 
             self.hass.config_entries.async_update_entry(
                 self._config_entry, data=self._data
@@ -381,6 +399,22 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
                         max=20.0,
                         step=0.1,
                         unit_of_measurement="m²·K/W",
+                        mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_MAX_TEMPERATURE,
+                    description={
+                        "suggested_value": self._data.get(
+                            CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE
+                        )
+                    },
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=30,
+                        max=100,
+                        step=1,
+                        unit_of_measurement="°C",
                         mode=NumberSelectorMode.BOX,
                     )
                 ),
