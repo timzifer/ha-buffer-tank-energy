@@ -205,11 +205,27 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options - start with tank dimensions."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
             self._data[CONF_TANK_VOLUME] = user_input[CONF_TANK_VOLUME]
             self._data[CONF_TANK_HEIGHT] = user_input[CONF_TANK_HEIGHT]
-            self._data[CONF_SENSORS] = []
-            return await self.async_step_sensors()
+
+            if user_input.get("reconfigure_sensors", False):
+                self._data[CONF_SENSORS] = []
+                return await self.async_step_sensors()
+
+            # Validate existing sensor positions against new tank height
+            new_height = user_input[CONF_TANK_HEIGHT]
+            invalid_sensors = [
+                s
+                for s in self._data.get(CONF_SENSORS, [])
+                if s[CONF_SENSOR_POSITION] > new_height
+            ]
+            if invalid_sensors:
+                errors["base"] = "sensors_exceed_new_height"
+            else:
+                return await self.async_step_optional()
 
         schema = vol.Schema(
             {
@@ -237,10 +253,18 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
                         mode=NumberSelectorMode.BOX,
                     )
                 ),
+                vol.Optional("reconfigure_sensors", default=False): BooleanSelector(),
             }
         )
 
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "sensor_count": str(len(self._data.get(CONF_SENSORS, []))),
+            },
+        )
 
     async def async_step_sensors(
         self, user_input: dict[str, Any] | None = None

@@ -51,14 +51,16 @@
     "step": {
       "init": {
         "title": "Tank-Dimensionen",
-        "description": "Aktualisiere die physischen Abmessungen deines Pufferspeichers.",
+        "description": "Aktualisiere die physischen Abmessungen deines Pufferspeichers. Aktuell konfigurierte Sensoren: {sensor_count}.",
         "data": {
           "tank_volume": "Tankvolumen",
-          "tank_height": "Tankhöhe"
+          "tank_height": "Tankhöhe",
+          "reconfigure_sensors": "Sensoren neu konfigurieren"
         },
         "data_description": {
           "tank_volume": "Gesamtes Wasservolumen des Pufferspeichers in Litern.",
-          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern."
+          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern.",
+          "reconfigure_sensors": "Aktiviere dies, um alle bestehenden Sensoren zu löschen und neu einzurichten. Deaktiviert lassen, um die aktuelle Sensorkonfiguration beizubehalten."
         }
       },
       "sensors": {
@@ -92,7 +94,8 @@
     },
     "error": {
       "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
-      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten."
+      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten.",
+      "sensors_exceed_new_height": "Einige bestehende Sensorpositionen überschreiten die neue Tankhöhe. Erhöhe die Höhe oder aktiviere 'Sensoren neu konfigurieren', um die Sensoren neu einzurichten."
     }
   }
 }
