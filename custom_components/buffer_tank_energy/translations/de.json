@@ -33,12 +33,14 @@
         "data": {
           "return_temp_entity": "Rücklauftemperatur-Sensor",
           "ambient_temp_entity": "Umgebungstemperatur-Sensor",
-          "insulation_r_value": "Isolierung R-Wert"
+          "insulation_r_value": "Isolierung R-Wert",
+          "max_temperature": "Maximaltemperatur (SoC)"
         },
         "data_description": {
           "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
           "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
-          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen."
+          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen.",
+          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100% Ladezustand. Standard: 80°C."
         }
       }
     },
@@ -83,12 +85,14 @@
         "data": {
           "return_temp_entity": "Rücklauftemperatur-Sensor",
           "ambient_temp_entity": "Umgebungstemperatur-Sensor",
-          "insulation_r_value": "Isolierung R-Wert"
+          "insulation_r_value": "Isolierung R-Wert",
+          "max_temperature": "Maximaltemperatur (SoC)"
         },
         "data_description": {
           "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
           "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
-          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen."
+          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen.",
+          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100% Ladezustand. Standard: 80°C."
         }
       }
     },
@@ -96,6 +100,17 @@
       "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
       "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten.",
       "sensors_exceed_new_height": "Einige bestehende Sensorpositionen überschreiten die neue Tankhöhe. Erhöhe die Höhe oder aktiviere 'Sensoren neu konfigurieren', um die Sensoren neu einzurichten."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "stored_energy": { "name": "Gespeicherte Energie" },
+      "heat_loss": { "name": "Wärmeverlust" },
+      "average_temperature": { "name": "Durchschnittstemperatur" },
+      "temperature_spread": { "name": "Temperaturspreizung" },
+      "state_of_charge": { "name": "Ladezustand" },
+      "charge_discharge_power": { "name": "Lade-/Entladeleistung" },
+      "cumulative_heat_loss": { "name": "Kumulativer Wärmeverlust" }
     }
   }
 }
