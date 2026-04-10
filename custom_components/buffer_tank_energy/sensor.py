@@ -181,6 +181,8 @@ class BufferTankBaseSensor(SensorEntity):
         self._sensor_configs = sensor_configs
         self._attr_device_info = device_info
         self._unsub_listeners: list = []
+        self._startup_ready = False
+        self._required_sensor_count = len(sensor_configs)
 
     def _get_sensor_readings(self) -> list[tuple[float, float]]:
         """Get current sensor readings as (position_m, temperature) tuples."""
@@ -191,6 +193,21 @@ class BufferTankBaseSensor(SensorEntity):
                 position_m = config[CONF_SENSOR_POSITION] / 1000.0
                 readings.append((position_m, temp))
         return readings
+
+    def _check_startup_ready(self, readings: list[tuple[float, float]]) -> bool:
+        """Check if all configured sensors have reported, marking startup as complete."""
+        if self._startup_ready:
+            return True
+        if len(readings) >= self._required_sensor_count:
+            self._startup_ready = True
+            return True
+        _LOGGER.debug(
+            "%s: Waiting for sensors (%d/%d available)",
+            self.entity_id,
+            len(readings),
+            self._required_sensor_count,
+        )
+        return False
 
     async def async_added_to_hass(self) -> None:
         """Register state change listeners when added to hass."""
@@ -263,6 +280,9 @@ class BufferTankEnergySensor(BufferTankBaseSensor):
         readings = self._get_sensor_readings()
         if not readings:
             self._attr_native_value = None
+            return
+
+        if not self._check_startup_ready(readings):
             return
 
         return_temp = (
@@ -341,6 +361,9 @@ class BufferTankHeatLossSensor(BufferTankBaseSensor):
             self._attr_native_value = None
             return
 
+        if not self._check_startup_ready(readings):
+            return
+
         ambient_temp = _get_float_state(self.hass, self._ambient_temp_entity)
         if ambient_temp is None:
             self._attr_native_value = None
@@ -389,6 +412,9 @@ class BufferTankAverageTemperatureSensor(BufferTankBaseSensor):
             self._attr_native_value = None
             return
 
+        if not self._check_startup_ready(readings):
+            return
+
         profile = interpolate_temperature_profile(readings, self._geometry.height_m)
         avg = calculate_average_temperature(profile)
 
@@ -420,6 +446,9 @@ class BufferTankTemperatureSpreadSensor(BufferTankBaseSensor):
         readings = self._get_sensor_readings()
         if not readings:
             self._attr_native_value = None
+            return
+
+        if not self._check_startup_ready(readings):
             return
 
         profile = interpolate_temperature_profile(readings, self._geometry.height_m)
@@ -468,6 +497,9 @@ class BufferTankStateOfChargeSensor(BufferTankBaseSensor):
         readings = self._get_sensor_readings()
         if not readings:
             self._attr_native_value = None
+            return
+
+        if not self._check_startup_ready(readings):
             return
 
         return_temp = (
@@ -529,6 +561,7 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
         self._attr_name = "Charge/Discharge Power"
         self._previous_energy: float | None = None
         self._previous_timestamp: datetime | None = None
+        self._previous_sensor_count: int | None = None
 
     def _get_extra_tracked_entities(self) -> list[str]:
         """Track return and ambient temp entities."""
@@ -544,6 +577,19 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
         readings = self._get_sensor_readings()
         if not readings:
             return
+
+        if not self._check_startup_ready(readings):
+            return
+
+        # Reset baseline if available sensor count changed to prevent power spikes
+        current_sensor_count = len(readings)
+        if (
+            self._previous_sensor_count is not None
+            and current_sensor_count != self._previous_sensor_count
+        ):
+            self._previous_energy = None
+            self._previous_timestamp = None
+        self._previous_sensor_count = current_sensor_count
 
         return_temp = (
             _get_float_state(self.hass, self._return_temp_entity)
@@ -634,6 +680,9 @@ class BufferTankCumulativeHeatLossSensor(BufferTankBaseSensor, RestoreEntity):
         readings = self._get_sensor_readings()
         if not readings:
             return  # Keep accumulated total
+
+        if not self._check_startup_ready(readings):
+            return
 
         ambient_temp = _get_float_state(self.hass, self._ambient_temp_entity)
         if ambient_temp is None:
