@@ -117,8 +117,7 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_SENSOR_ENTITY): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Required(CONF_SENSOR_POSITION): NumberSelector(
@@ -172,14 +171,12 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Optional(CONF_RETURN_TEMP_ENTITY): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Optional(CONF_AMBIENT_TEMP_ENTITY): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Optional(CONF_INSULATION_R_VALUE): NumberSelector(
@@ -315,8 +312,7 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
             {
                 vol.Required(CONF_SENSOR_ENTITY): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Required(CONF_SENSOR_POSITION): NumberSelector(
@@ -373,8 +369,7 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
                     },
                 ): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Optional(
@@ -384,8 +379,7 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
                     },
                 ): EntitySelector(
                     EntitySelectorConfig(
-                        domain="sensor",
-                        device_class="temperature",
+                        domain=["sensor", "input_number"],
                     )
                 ),
                 vol.Optional(
