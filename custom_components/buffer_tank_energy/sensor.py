@@ -47,6 +47,7 @@ from .const import (
     CONF_TANK_VOLUME,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
+    EMA_SMOOTHING_ALPHA,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -349,6 +350,7 @@ class BufferTankHeatLossSensor(BufferTankBaseSensor):
         self._attr_unique_id = f"{entry.entry_id}_heat_loss"
         self._attr_name = "Heat Loss"
         self._attr_device_info = device_info
+        self._ema_heat_loss: float | None = None
 
     def _get_extra_tracked_entities(self) -> list[str]:
         """Track ambient temp entity."""
@@ -370,11 +372,20 @@ class BufferTankHeatLossSensor(BufferTankBaseSensor):
             return
 
         profile = interpolate_temperature_profile(readings, self._geometry.height_m)
-        power_watts = calculate_heat_loss(
+        raw_power_watts = calculate_heat_loss(
             self._geometry, profile, ambient_temp, self._r_value
         )
 
-        self._attr_native_value = round(power_watts, 0)
+        # Apply EMA smoothing to reduce noise from sensor fluctuations
+        if self._ema_heat_loss is None:
+            self._ema_heat_loss = raw_power_watts
+        else:
+            self._ema_heat_loss = (
+                EMA_SMOOTHING_ALPHA * raw_power_watts
+                + (1 - EMA_SMOOTHING_ALPHA) * self._ema_heat_loss
+            )
+
+        self._attr_native_value = round(self._ema_heat_loss, 0)
         self._attr_extra_state_attributes = {
             "ambient_temperature": round(ambient_temp, 1),
             "r_value": self._r_value,
@@ -562,6 +573,7 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
         self._previous_energy: float | None = None
         self._previous_timestamp: datetime | None = None
         self._previous_sensor_count: int | None = None
+        self._ema_power: float | None = None
 
     def _get_extra_tracked_entities(self) -> list[str]:
         """Track return and ambient temp entities."""
@@ -589,6 +601,7 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
         ):
             self._previous_energy = None
             self._previous_timestamp = None
+            self._ema_power = None
         self._previous_sensor_count = current_sensor_count
 
         return_temp = (
@@ -617,8 +630,18 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
                 return  # Too soon, keep previous value
 
             time_delta_hours = time_delta_s / 3600.0
-            power_kw = (energy_kwh - self._previous_energy) / time_delta_hours
-            self._attr_native_value = round(power_kw, 2)
+            raw_power_kw = (energy_kwh - self._previous_energy) / time_delta_hours
+
+            # Apply EMA smoothing to reduce noise from sensor fluctuations
+            if self._ema_power is None:
+                self._ema_power = raw_power_kw
+            else:
+                self._ema_power = (
+                    EMA_SMOOTHING_ALPHA * raw_power_kw
+                    + (1 - EMA_SMOOTHING_ALPHA) * self._ema_power
+                )
+
+            self._attr_native_value = round(self._ema_power, 2)
 
         self._previous_energy = energy_kwh
         self._previous_timestamp = now

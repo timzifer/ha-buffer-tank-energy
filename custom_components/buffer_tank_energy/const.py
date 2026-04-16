@@ -22,3 +22,8 @@ WATER_SPECIFIC_HEAT = 4.186  # kJ/(kg·K)
 WATER_DENSITY = 1000.0  # kg/m³
 NUM_LAYERS = 100  # Number of discrete layers for energy calculation
 KJ_TO_KWH = 1 / 3600  # Conversion factor kJ -> kWh
+
+# EMA smoothing factor for power sensors (0 < alpha <= 1)
+# Lower values = more smoothing, higher values = faster response
+# 0.2 provides good noise damping while still tracking real changes
+EMA_SMOOTHING_ALPHA = 0.2
