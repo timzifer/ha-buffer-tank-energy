@@ -1,7 +1,7 @@
 {
   "domain": "buffer_tank_energy",
   "name": "Buffer Tank Energy",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "codeowners": ["@timzifer"],
   "config_flow": true,
   "dependencies": [],

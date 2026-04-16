@@ -34,13 +34,15 @@
           "return_temp_entity": "Return Temperature Sensor",
           "ambient_temp_entity": "Ambient Temperature Sensor",
           "insulation_r_value": "Insulation R-Value",
-          "max_temperature": "Maximum Temperature (SoC)"
+          "max_temperature": "Maximum Temperature (SoC)",
+          "ema_smoothing": "Power Smoothing Factor"
         },
         "data_description": {
           "return_temp_entity": "Sensor measuring the return water temperature. Used as reference for energy calculation.",
           "ambient_temp_entity": "Sensor measuring the ambient temperature around the tank.",
           "insulation_r_value": "Thermal resistance of the tank insulation in m²·K/W. Required together with ambient sensor to calculate heat loss.",
-          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C."
+          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C.",
+          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors. Lower values = smoother but slower response. Higher values = faster but noisier. 1.0 = no smoothing."
         }
       }
     },
@@ -86,13 +88,15 @@
           "return_temp_entity": "Return Temperature Sensor",
           "ambient_temp_entity": "Ambient Temperature Sensor",
           "insulation_r_value": "Insulation R-Value",
-          "max_temperature": "Maximum Temperature (SoC)"
+          "max_temperature": "Maximum Temperature (SoC)",
+          "ema_smoothing": "Power Smoothing Factor"
         },
         "data_description": {
           "return_temp_entity": "Sensor measuring the return water temperature. Used as reference for energy calculation.",
           "ambient_temp_entity": "Sensor measuring the ambient temperature around the tank.",
           "insulation_r_value": "Thermal resistance of the tank insulation in m²·K/W. Required together with ambient sensor to calculate heat loss.",
-          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C."
+          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C.",
+          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors. Lower values = smoother but slower response. Higher values = faster but noisier. 1.0 = no smoothing."
         }
       }
     },

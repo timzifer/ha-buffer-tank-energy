@@ -14,8 +14,10 @@ CONF_RETURN_TEMP_ENTITY = "return_temp_entity"
 CONF_AMBIENT_TEMP_ENTITY = "ambient_temp_entity"
 CONF_INSULATION_R_VALUE = "insulation_r_value"  # m²·K/W
 CONF_MAX_TEMPERATURE = "max_temperature"  # °C (for SoC calculation)
+CONF_EMA_SMOOTHING = "ema_smoothing"  # EMA alpha factor for power sensors
 
 DEFAULT_MAX_TEMPERATURE = 80.0  # °C
+DEFAULT_EMA_SMOOTHING = 0.2  # Good balance of noise damping and responsiveness
 
 # Physics constants
 WATER_SPECIFIC_HEAT = 4.186  # kJ/(kg·K)
