@@ -37,6 +37,7 @@ from .calculator import (
 )
 from .const import (
     CONF_AMBIENT_TEMP_ENTITY,
+    CONF_EMA_SMOOTHING,
     CONF_INSULATION_R_VALUE,
     CONF_MAX_TEMPERATURE,
     CONF_RETURN_TEMP_ENTITY,
@@ -45,9 +46,9 @@ from .const import (
     CONF_SENSORS,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
+    DEFAULT_EMA_SMOOTHING,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
-    EMA_SMOOTHING_ALPHA,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ async def async_setup_entry(
     ambient_temp_entity = data.get(CONF_AMBIENT_TEMP_ENTITY)
     r_value = data.get(CONF_INSULATION_R_VALUE)
     max_temperature = data.get(CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE)
+    ema_smoothing = data.get(CONF_EMA_SMOOTHING, DEFAULT_EMA_SMOOTHING)
 
     if return_temp_entity:
         tracked_entities.append(return_temp_entity)
@@ -122,6 +124,7 @@ async def async_setup_entry(
             sensor_configs=sensor_configs,
             return_temp_entity=return_temp_entity,
             ambient_temp_entity=ambient_temp_entity,
+            ema_alpha=ema_smoothing,
             device_info=device_info,
         ),
     ]
@@ -135,6 +138,7 @@ async def async_setup_entry(
                 sensor_configs=sensor_configs,
                 ambient_temp_entity=ambient_temp_entity,
                 r_value=r_value,
+                ema_alpha=ema_smoothing,
                 device_info=device_info,
             )
         )
@@ -341,12 +345,14 @@ class BufferTankHeatLossSensor(BufferTankBaseSensor):
         sensor_configs: list[dict[str, Any]],
         ambient_temp_entity: str,
         r_value: float,
+        ema_alpha: float,
         device_info: DeviceInfo,
     ) -> None:
         """Initialize heat loss sensor."""
         super().__init__(entry, geometry, sensor_configs, DeviceInfo())
         self._ambient_temp_entity = ambient_temp_entity
         self._r_value = r_value
+        self._ema_alpha = ema_alpha
         self._attr_unique_id = f"{entry.entry_id}_heat_loss"
         self._attr_name = "Heat Loss"
         self._attr_device_info = device_info
@@ -381,8 +387,8 @@ class BufferTankHeatLossSensor(BufferTankBaseSensor):
             self._ema_heat_loss = raw_power_watts
         else:
             self._ema_heat_loss = (
-                EMA_SMOOTHING_ALPHA * raw_power_watts
-                + (1 - EMA_SMOOTHING_ALPHA) * self._ema_heat_loss
+                self._ema_alpha * raw_power_watts
+                + (1 - self._ema_alpha) * self._ema_heat_loss
             )
 
         self._attr_native_value = round(self._ema_heat_loss, 0)
@@ -562,12 +568,14 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
         sensor_configs: list[dict[str, Any]],
         return_temp_entity: str | None,
         ambient_temp_entity: str | None,
+        ema_alpha: float,
         device_info: DeviceInfo,
     ) -> None:
         """Initialize charge/discharge power sensor."""
         super().__init__(entry, geometry, sensor_configs, device_info)
         self._return_temp_entity = return_temp_entity
         self._ambient_temp_entity = ambient_temp_entity
+        self._ema_alpha = ema_alpha
         self._attr_unique_id = f"{entry.entry_id}_charge_discharge_power"
         self._attr_name = "Charge/Discharge Power"
         self._previous_energy: float | None = None
@@ -637,8 +645,8 @@ class BufferTankChargeDischargePowerSensor(BufferTankBaseSensor):
                 self._ema_power = raw_power_kw
             else:
                 self._ema_power = (
-                    EMA_SMOOTHING_ALPHA * raw_power_kw
-                    + (1 - EMA_SMOOTHING_ALPHA) * self._ema_power
+                    self._ema_alpha * raw_power_kw
+                    + (1 - self._ema_alpha) * self._ema_power
                 )
 
             self._attr_native_value = round(self._ema_power, 2)

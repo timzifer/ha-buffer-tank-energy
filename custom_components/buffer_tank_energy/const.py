@@ -14,16 +14,13 @@ CONF_RETURN_TEMP_ENTITY = "return_temp_entity"
 CONF_AMBIENT_TEMP_ENTITY = "ambient_temp_entity"
 CONF_INSULATION_R_VALUE = "insulation_r_value"  # m²·K/W
 CONF_MAX_TEMPERATURE = "max_temperature"  # °C (for SoC calculation)
+CONF_EMA_SMOOTHING = "ema_smoothing"  # EMA alpha factor for power sensors
 
 DEFAULT_MAX_TEMPERATURE = 80.0  # °C
+DEFAULT_EMA_SMOOTHING = 0.2  # Good balance of noise damping and responsiveness
 
 # Physics constants
 WATER_SPECIFIC_HEAT = 4.186  # kJ/(kg·K)
 WATER_DENSITY = 1000.0  # kg/m³
 NUM_LAYERS = 100  # Number of discrete layers for energy calculation
 KJ_TO_KWH = 1 / 3600  # Conversion factor kJ -> kWh
-
-# EMA smoothing factor for power sensors (0 < alpha <= 1)
-# Lower values = more smoothing, higher values = faster response
-# 0.2 provides good noise damping while still tracking real changes
-EMA_SMOOTHING_ALPHA = 0.2

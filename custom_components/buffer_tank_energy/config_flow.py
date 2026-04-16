@@ -20,6 +20,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_AMBIENT_TEMP_ENTITY,
+    CONF_EMA_SMOOTHING,
     CONF_INSULATION_R_VALUE,
     CONF_MAX_TEMPERATURE,
     CONF_RETURN_TEMP_ENTITY,
@@ -28,6 +29,7 @@ from .const import (
     CONF_SENSORS,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
+    DEFAULT_EMA_SMOOTHING,
     DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
 )
@@ -161,6 +163,9 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
                 ]
             if user_input.get(CONF_MAX_TEMPERATURE):
                 self._data[CONF_MAX_TEMPERATURE] = user_input[CONF_MAX_TEMPERATURE]
+            self._data[CONF_EMA_SMOOTHING] = user_input.get(
+                CONF_EMA_SMOOTHING, DEFAULT_EMA_SMOOTHING
+            )
 
             return self.async_create_entry(
                 title=f"Buffer Tank ({self._data[CONF_TANK_VOLUME]}L)",
@@ -197,6 +202,16 @@ class BufferTankEnergyConfigFlow(ConfigFlow, domain=DOMAIN):
                         step=1,
                         unit_of_measurement="°C",
                         mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_EMA_SMOOTHING, default=DEFAULT_EMA_SMOOTHING
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0.05,
+                        max=1.0,
+                        step=0.05,
+                        mode=NumberSelectorMode.SLIDER,
                     )
                 ),
             }
@@ -354,6 +369,9 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
             self._data[CONF_MAX_TEMPERATURE] = user_input.get(
                 CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE
             )
+            self._data[CONF_EMA_SMOOTHING] = user_input.get(
+                CONF_EMA_SMOOTHING, DEFAULT_EMA_SMOOTHING
+            )
 
             self.hass.config_entries.async_update_entry(
                 self._config_entry, data=self._data
@@ -410,6 +428,21 @@ class BufferTankEnergyOptionsFlow(OptionsFlow):
                         step=1,
                         unit_of_measurement="°C",
                         mode=NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_EMA_SMOOTHING,
+                    description={
+                        "suggested_value": self._data.get(
+                            CONF_EMA_SMOOTHING, DEFAULT_EMA_SMOOTHING
+                        )
+                    },
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0.05,
+                        max=1.0,
+                        step=0.05,
+                        mode=NumberSelectorMode.SLIDER,
                     )
                 ),
             }
