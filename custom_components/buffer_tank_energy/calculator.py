@@ -4,8 +4,24 @@ from __future__ import annotations
 
 import bisect
 import math
+from dataclasses import dataclass
 
 from .const import KJ_TO_KWH, NUM_LAYERS, WATER_DENSITY, WATER_SPECIFIC_HEAT
+
+# Number of spline samples used to derive stratification/thermocline metrics.
+PROFILE_SAMPLE_COUNT = 201
+
+# Fraction of peak |dT/dz| used to delimit the thermocline region.
+THERMOCLINE_WIDTH_ALPHA = 0.5
+
+# Minimum top-to-bottom temperature span before a thermocline is reported.
+MIN_THERMOCLINE_SPAN_K = 0.5
+
+# Fallback reference span (K) used to normalise ΔT when no other basis exists.
+DEFAULT_STRATIFICATION_REFERENCE_SPAN_K = 30.0
+
+# Lower bound applied to the stratification reference span to avoid blow-up.
+MIN_STRATIFICATION_REFERENCE_SPAN_K = 10.0
 
 
 class TankGeometry:
@@ -172,6 +188,251 @@ def interpolate_temperature_profile(
             )
 
     return temperatures
+
+
+def _eval_cubic_spline_segment_derivative(
+    x: float,
+    i: int,
+    xs: list[float],
+    ys: list[float],
+    m: list[float],
+) -> float:
+    """Analytic first derivative of the natural cubic spline on [xs[i], xs[i+1]]."""
+    h = xs[i + 1] - xs[i]
+    a = xs[i + 1] - x
+    b = x - xs[i]
+    return (
+        -m[i] * a * a / (2.0 * h)
+        + m[i + 1] * b * b / (2.0 * h)
+        - (ys[i] / h - m[i] * h / 6.0)
+        + (ys[i + 1] / h - m[i + 1] * h / 6.0)
+    )
+
+
+@dataclass
+class TemperatureSamples:
+    """Uniform samples of the temperature spline and its first derivative."""
+
+    positions_m: list[float]
+    temperatures: list[float]
+    gradients_k_per_m: list[float]
+    tank_height_m: float
+
+
+def sample_temperature_profile(
+    sensors: list[tuple[float, float]],
+    tank_height_m: float,
+    num_samples: int = PROFILE_SAMPLE_COUNT,
+) -> TemperatureSamples | None:
+    """Sample T(z) and dT/dz uniformly along the tank height.
+
+    The sampler uses the same natural cubic spline as the energy calculation
+    but evaluates it on a finer grid and returns the analytic derivative so
+    that stratification and thermocline metrics can be computed directly from
+    the continuous profile.
+    """
+    if not sensors or tank_height_m <= 0 or num_samples < 2:
+        return None
+
+    xs, ys = _dedupe_sorted_sensors(sensors)
+    n = len(xs)
+    if n == 0:
+        return None
+
+    dz = tank_height_m / (num_samples - 1)
+    positions = [i * dz for i in range(num_samples)]
+
+    if n == 1:
+        return TemperatureSamples(
+            positions_m=positions,
+            temperatures=[ys[0]] * num_samples,
+            gradients_k_per_m=[0.0] * num_samples,
+            tank_height_m=tank_height_m,
+        )
+
+    if n == 2:
+        slope = (ys[1] - ys[0]) / (xs[1] - xs[0])
+        temps = [ys[0] + slope * (z - xs[0]) for z in positions]
+        return TemperatureSamples(
+            positions_m=positions,
+            temperatures=temps,
+            gradients_k_per_m=[slope] * num_samples,
+            tank_height_m=tank_height_m,
+        )
+
+    second_derivs = _natural_cubic_spline_second_derivs(xs, ys)
+    h0 = xs[1] - xs[0]
+    h_last = xs[-1] - xs[-2]
+    slope_low = (ys[1] - ys[0]) / h0 - h0 / 6.0 * (
+        2.0 * second_derivs[0] + second_derivs[1]
+    )
+    slope_high = (ys[-1] - ys[-2]) / h_last + h_last / 6.0 * (
+        second_derivs[-2] + 2.0 * second_derivs[-1]
+    )
+
+    temperatures: list[float] = []
+    gradients: list[float] = []
+    for z in positions:
+        if z <= xs[0]:
+            temperatures.append(ys[0] + slope_low * (z - xs[0]))
+            gradients.append(slope_low)
+        elif z >= xs[-1]:
+            temperatures.append(ys[-1] + slope_high * (z - xs[-1]))
+            gradients.append(slope_high)
+        else:
+            idx = bisect.bisect_right(xs, z) - 1
+            if idx >= n - 1:
+                idx = n - 2
+            temperatures.append(
+                _eval_cubic_spline_segment(z, idx, xs, ys, second_derivs)
+            )
+            gradients.append(
+                _eval_cubic_spline_segment_derivative(z, idx, xs, ys, second_derivs)
+            )
+
+    return TemperatureSamples(
+        positions_m=positions,
+        temperatures=temperatures,
+        gradients_k_per_m=gradients,
+        tank_height_m=tank_height_m,
+    )
+
+
+def _trapezoid(values: list[float], dz: float) -> float:
+    """Simple trapezoidal integration over a uniform grid."""
+    if len(values) < 2:
+        return 0.0
+    total = 0.5 * (values[0] + values[-1])
+    for v in values[1:-1]:
+        total += v
+    return total * dz
+
+
+@dataclass
+class StratificationMetrics:
+    """Composite and component metrics describing the tank stratification."""
+
+    index: float  # 0..1 — weighted combination of the components
+    span_normalized: float  # 0..1 — top-bottom spread vs reference span
+    monotonicity: float  # 0..1 — 1 = strictly increasing with z
+    gradient_concentration: float  # 0..1 — 0 = uniform, 1 = delta-like peak
+    temperature_span_k: float  # T(H) - T(0)
+
+
+def calculate_stratification(
+    samples: TemperatureSamples,
+    reference_span_k: float,
+    weights: tuple[float, float, float] = (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0),
+) -> StratificationMetrics | None:
+    """Compute the stratification index and its three components.
+
+    The tank convention is z=0 at the bottom and z=H at the top, so a well
+    stratified tank has dT/dz >= 0 and T(H) > T(0).
+    """
+    positions = samples.positions_m
+    gradients = samples.gradients_k_per_m
+    temperatures = samples.temperatures
+    if len(positions) < 2:
+        return None
+
+    dz = positions[1] - positions[0]
+    if dz <= 0:
+        return None
+
+    temperature_span = temperatures[-1] - temperatures[0]
+
+    reference = max(reference_span_k, MIN_STRATIFICATION_REFERENCE_SPAN_K)
+    span_normalized = max(0.0, min(temperature_span / reference, 1.0))
+
+    abs_grad = [abs(g) for g in gradients]
+    wrong_way = [max(0.0, -g) for g in gradients]
+    total_abs = _trapezoid(abs_grad, dz)
+    if total_abs <= 1e-9:
+        monotonicity = 1.0
+        gradient_concentration = 0.0
+    else:
+        inversion_integral = _trapezoid(wrong_way, dz)
+        monotonicity = 1.0 - inversion_integral / total_abs
+        monotonicity = max(0.0, min(monotonicity, 1.0))
+        mean_abs = total_abs / (positions[-1] - positions[0])
+        max_abs = max(abs_grad)
+        gradient_concentration = (
+            (max_abs - mean_abs) / max_abs if max_abs > 0 else 0.0
+        )
+        gradient_concentration = max(0.0, min(gradient_concentration, 1.0))
+
+    w1, w2, w3 = weights
+    total_weight = w1 + w2 + w3
+    if total_weight <= 0:
+        return None
+    index = (
+        w1 * span_normalized + w2 * monotonicity + w3 * gradient_concentration
+    ) / total_weight
+
+    return StratificationMetrics(
+        index=max(0.0, min(index, 1.0)),
+        span_normalized=span_normalized,
+        monotonicity=monotonicity,
+        gradient_concentration=gradient_concentration,
+        temperature_span_k=temperature_span,
+    )
+
+
+@dataclass
+class ThermoclineMetrics:
+    """Location, intensity and extent of the steepest gradient zone."""
+
+    position_m: float
+    position_fraction: float  # 0..1 of tank height
+    strength_k_per_m: float  # |dT/dz| at the peak
+    thickness_m: float
+    thickness_fraction: float
+    sharpness_k_per_m2: float | None
+
+
+def calculate_thermocline(
+    samples: TemperatureSamples,
+    width_alpha: float = THERMOCLINE_WIDTH_ALPHA,
+    min_span_k: float = MIN_THERMOCLINE_SPAN_K,
+) -> ThermoclineMetrics | None:
+    """Locate the thermocline as the peak of |dT/dz| and measure its extent."""
+    positions = samples.positions_m
+    gradients = samples.gradients_k_per_m
+    temperatures = samples.temperatures
+    if len(positions) < 2:
+        return None
+
+    if abs(temperatures[-1] - temperatures[0]) < min_span_k:
+        return None
+
+    abs_grad = [abs(g) for g in gradients]
+    peak_index = max(range(len(abs_grad)), key=lambda i: abs_grad[i])
+    peak_value = abs_grad[peak_index]
+    if peak_value <= 0:
+        return None
+
+    threshold = width_alpha * peak_value
+
+    lo = peak_index
+    while lo > 0 and abs_grad[lo - 1] >= threshold:
+        lo -= 1
+    hi = peak_index
+    while hi < len(abs_grad) - 1 and abs_grad[hi + 1] >= threshold:
+        hi += 1
+
+    thickness_m = positions[hi] - positions[lo]
+    height = samples.tank_height_m
+    thickness_fraction = thickness_m / height if height > 0 else 0.0
+    sharpness = peak_value / thickness_m if thickness_m > 0 else None
+
+    return ThermoclineMetrics(
+        position_m=positions[peak_index],
+        position_fraction=(positions[peak_index] / height) if height > 0 else 0.0,
+        strength_k_per_m=peak_value,
+        thickness_m=thickness_m,
+        thickness_fraction=thickness_fraction,
+        sharpness_k_per_m2=sharpness,
+    )
 
 
 def calculate_stored_energy(

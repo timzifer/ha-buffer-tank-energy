@@ -139,7 +139,14 @@
       "temperature_spread": { "name": "Temperature Spread" },
       "state_of_charge": { "name": "State of Charge" },
       "charge_discharge_power": { "name": "Charge/Discharge Power" },
-      "cumulative_heat_loss": { "name": "Cumulative Heat Loss" }
+      "cumulative_heat_loss": { "name": "Cumulative Heat Loss" },
+      "stratification_index": { "name": "Stratification Index" },
+      "stratification_monotonicity": { "name": "Stratification Monotonicity" },
+      "gradient_concentration": { "name": "Gradient Concentration" },
+      "thermocline_position": { "name": "Thermocline Position" },
+      "thermocline_strength": { "name": "Thermocline Strength" },
+      "thermocline_thickness": { "name": "Thermocline Thickness" },
+      "thermocline_sharpness": { "name": "Thermocline Sharpness" }
     }
   }
 }

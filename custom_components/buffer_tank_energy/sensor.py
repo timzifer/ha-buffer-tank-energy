@@ -55,6 +55,13 @@ async def async_setup_entry(
         BufferTankTemperatureSpreadSensor(coordinator, entry, device_info),
         BufferTankStateOfChargeSensor(coordinator, entry, device_info),
         BufferTankChargeDischargePowerSensor(coordinator, entry, device_info),
+        BufferTankStratificationIndexSensor(coordinator, entry, device_info),
+        BufferTankStratificationMonotonicitySensor(coordinator, entry, device_info),
+        BufferTankGradientConcentrationSensor(coordinator, entry, device_info),
+        BufferTankThermoclinePositionSensor(coordinator, entry, device_info),
+        BufferTankThermoclineStrengthSensor(coordinator, entry, device_info),
+        BufferTankThermoclineThicknessSensor(coordinator, entry, device_info),
+        BufferTankThermoclineSharpnessSensor(coordinator, entry, device_info),
     ]
 
     ambient_entity = coordinator.ambient_temp_entity
@@ -455,6 +462,223 @@ class BufferTankCumulativeHeatLossSensor(_BufferTankEntity, RestoreEntity):
             "last_update_time": now.isoformat(),
         }
         super()._handle_coordinator_update()
+
+
+class BufferTankStratificationIndexSensor(_BufferTankEntity):
+    """Composite stratification quality index (0-100 %)."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "stratification_index"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the stratification-index sensor."""
+        super().__init__(coordinator, entry, device_info, "stratification_index")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the stratification index as a percentage."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.stratification is None:
+            return None
+        return round(data.stratification.index * 100.0, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Expose the underlying components of the index."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.stratification is None:
+            return None
+        metrics = data.stratification
+        return {
+            "temperature_span_k": round(metrics.temperature_span_k, 2),
+            "span_normalized": round(metrics.span_normalized, 3),
+            "monotonicity": round(metrics.monotonicity, 3),
+            "gradient_concentration": round(metrics.gradient_concentration, 3),
+        }
+
+
+class BufferTankStratificationMonotonicitySensor(_BufferTankEntity):
+    """Monotonicity component of the stratification index (0-100 %)."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "stratification_monotonicity"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the monotonicity sensor."""
+        super().__init__(coordinator, entry, device_info, "stratification_monotonicity")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the monotonicity as a percentage."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.stratification is None:
+            return None
+        return round(data.stratification.monotonicity * 100.0, 1)
+
+
+class BufferTankGradientConcentrationSensor(_BufferTankEntity):
+    """Gradient concentration component of the stratification index (0-100 %)."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "gradient_concentration"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the gradient-concentration sensor."""
+        super().__init__(coordinator, entry, device_info, "gradient_concentration")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the gradient concentration as a percentage."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.stratification is None:
+            return None
+        return round(data.stratification.gradient_concentration * 100.0, 1)
+
+
+class BufferTankThermoclinePositionSensor(_BufferTankEntity):
+    """Height of the steepest temperature gradient, relative to tank height."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "thermocline_position"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the thermocline-position sensor."""
+        super().__init__(coordinator, entry, device_info, "thermocline_position")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the thermocline height as a percentage of the tank height."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.thermocline is None:
+            return None
+        return round(data.thermocline.position_fraction * 100.0, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Expose the thermocline position in millimetres."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.thermocline is None:
+            return None
+        return {"position_mm": round(data.thermocline.position_m * 1000.0, 0)}
+
+
+class BufferTankThermoclineStrengthSensor(_BufferTankEntity):
+    """Peak vertical temperature gradient (K/m)."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "K/m"
+    _attr_suggested_display_precision = 2
+    _attr_translation_key = "thermocline_strength"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the thermocline-strength sensor."""
+        super().__init__(coordinator, entry, device_info, "thermocline_strength")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the peak |dT/dz| in K/m."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.thermocline is None:
+            return None
+        return round(data.thermocline.strength_k_per_m, 2)
+
+
+class BufferTankThermoclineThicknessSensor(_BufferTankEntity):
+    """Thickness of the thermocline expressed as a fraction of the tank height."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 1
+    _attr_translation_key = "thermocline_thickness"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the thermocline-thickness sensor."""
+        super().__init__(coordinator, entry, device_info, "thermocline_thickness")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the thermocline thickness as a percentage of tank height."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.thermocline is None:
+            return None
+        return round(data.thermocline.thickness_fraction * 100.0, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Expose the thermocline thickness in millimetres."""
+        data = self.coordinator.data
+        if not data or not data.ready or data.thermocline is None:
+            return None
+        return {"thickness_mm": round(data.thermocline.thickness_m * 1000.0, 0)}
+
+
+class BufferTankThermoclineSharpnessSensor(_BufferTankEntity):
+    """Thermocline sharpness — peak gradient divided by thermocline thickness."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "K/m²"
+    _attr_suggested_display_precision = 2
+    _attr_translation_key = "thermocline_sharpness"
+
+    def __init__(
+        self,
+        coordinator: BufferTankCoordinator,
+        entry: ConfigEntry,
+        device_info: DeviceInfo,
+    ) -> None:
+        """Initialize the thermocline-sharpness sensor."""
+        super().__init__(coordinator, entry, device_info, "thermocline_sharpness")
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the thermocline sharpness in K/m²."""
+        data = self.coordinator.data
+        if (
+            not data
+            or not data.ready
+            or data.thermocline is None
+            or data.thermocline.sharpness_k_per_m2 is None
+        ):
+            return None
+        return round(data.thermocline.sharpness_k_per_m2, 2)
 
 
 class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], SensorEntity):

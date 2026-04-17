@@ -139,7 +139,14 @@
       "temperature_spread": { "name": "Temperaturspreizung" },
       "state_of_charge": { "name": "Ladezustand" },
       "charge_discharge_power": { "name": "Lade-/Entladeleistung" },
-      "cumulative_heat_loss": { "name": "Kumulativer Wärmeverlust" }
+      "cumulative_heat_loss": { "name": "Kumulativer Wärmeverlust" },
+      "stratification_index": { "name": "Schichtungsindex" },
+      "stratification_monotonicity": { "name": "Schichtungs-Monotonie" },
+      "gradient_concentration": { "name": "Gradientenkonzentration" },
+      "thermocline_position": { "name": "Thermokline-Position" },
+      "thermocline_strength": { "name": "Thermokline-Stärke" },
+      "thermocline_thickness": { "name": "Thermokline-Breite" },
+      "thermocline_sharpness": { "name": "Thermokline-Schärfe" }
     }
   }
 }
