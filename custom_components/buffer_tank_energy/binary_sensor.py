@@ -13,8 +13,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    CONF_TANK_HEIGHT,
-    CONF_TANK_VOLUME,
     CONF_THRESHOLD_HYSTERESIS,
     CONF_THRESHOLD_MIN_TEMP,
     CONF_THRESHOLD_NAME,
@@ -37,14 +35,6 @@ async def async_setup_entry(
     """Create binary sensors for threshold subentries."""
     coordinator: BufferTankCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    device_info = DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=entry.title,
-        manufacturer="Buffer Tank Energy",
-        model=f"{entry.data[CONF_TANK_VOLUME]}L / {entry.data[CONF_TANK_HEIGHT]}mm",
-        entry_type=DeviceEntryType.SERVICE,
-    )
-
     probe_subentries = {
         sid
         for sid, sub in entry.subentries.items()
@@ -65,11 +55,31 @@ async def async_setup_entry(
         async_add_entities(
             [
                 BufferTankThresholdSensor(
-                    coordinator, entry, subentry, device_info
+                    coordinator,
+                    entry,
+                    subentry,
+                    _threshold_device_info(entry, subentry),
                 )
             ],
             config_subentry_id=subentry_id,
         )
+
+
+def _threshold_device_info(
+    entry: ConfigEntry, subentry: ConfigSubentry
+) -> DeviceInfo:
+    """Return device info for a threshold subentry, linked to the tank."""
+    name = subentry.data.get(CONF_THRESHOLD_NAME) or subentry.title
+    return DeviceInfo(
+        identifiers={
+            (DOMAIN, f"{entry.entry_id}_threshold_{subentry.subentry_id}")
+        },
+        name=name,
+        manufacturer="Buffer Tank Energy",
+        model="Threshold",
+        via_device=(DOMAIN, entry.entry_id),
+        entry_type=DeviceEntryType.SERVICE,
+    )
 
 
 class BufferTankThresholdSensor(
@@ -95,7 +105,7 @@ class BufferTankThresholdSensor(
             data.get(CONF_THRESHOLD_HYSTERESIS, DEFAULT_THRESHOLD_HYSTERESIS)
         )
         self._attr_unique_id = f"{entry.entry_id}_threshold_{subentry.subentry_id}"
-        self._attr_name = data.get(CONF_THRESHOLD_NAME, subentry.title)
+        self._attr_name = None
         self._attr_device_info = device_info
         self._is_on: bool | None = None
 
