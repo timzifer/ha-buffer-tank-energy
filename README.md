@@ -15,6 +15,7 @@ A [Home Assistant](https://www.home-assistant.io/) custom integration that calcu
 - **Cumulative Heat Loss (kWh)** — Accumulated heat loss energy over time (survives restarts).
 - **Average Temperature (°C)** — Volume-weighted average temperature of the tank.
 - **Temperature Spread (°C)** — Difference between hottest and coldest layer.
+- **Stratification & Thermocline Metrics** — Composite stratification quality index plus explicit thermocline position, strength, thickness and sharpness, derived from a cubic-spline sampling of the 100-layer profile.
 
 ## How It Works
 
@@ -50,6 +51,16 @@ The charge/discharge power and heat loss sensors apply an **Exponential Moving A
 - **Higher values** (e.g. 0.5) = faster response, more noise
 - **1.0** = no smoothing (raw values)
 - **Default: 0.2** — good balance between noise damping and responsiveness
+
+### Stratification & Thermocline
+
+A second derived 201-point sampling of the layer profile (cubic spline, linear extension outside the sensor range) feeds two groups of metrics:
+
+- **Stratification index** — composite 0-100 % quality score combining:
+  - *Span normalization* — how large the top-to-bottom temperature spread is relative to a reference span (max temperature − reference temperature, fallback 40 K).
+  - *Monotonicity* — share of the profile where `dT/dz ≥ 0` (warm at top).
+  - *Gradient concentration* — how concentrated the gradient is in a narrow band (sharper layering scores higher).
+- **Thermocline** — located at the peak of `|dT/dz|`. The thickness spans all points where `|dT/dz| ≥ 0.5 × peak`. A spread smaller than 0.5 K suppresses the thermocline (prevents false positives on flat profiles).
 
 ## Installation
 
@@ -119,6 +130,13 @@ Installations from Buffer Tank Energy v1.x are migrated automatically on first s
 | Charge/Discharge Power | kW | Rate of energy change (positive = charging) |
 | Average Temperature | °C | Mean temperature across all layers |
 | Temperature Spread | °C | Max − Min temperature |
+| Stratification Index | % | Composite 0-100 quality score |
+| Stratification Monotonicity | % | Share of profile with non-negative gradient |
+| Gradient Concentration | % | How concentrated the gradient is in a narrow band |
+| Thermocline Position | % | Height of the steepest gradient, relative to tank height (attr `position_mm`) |
+| Thermocline Strength | K/m | Peak `|dT/dz|` |
+| Thermocline Thickness | % | Extent of the thermocline band, relative to tank height (attr `thickness_mm`) |
+| Thermocline Sharpness | K/m² | Strength divided by thickness (may be unavailable) |
 | Heat Loss | W | Estimated power lost through insulation\* |
 | Cumulative Heat Loss | kWh | Total heat loss energy over time\* |
 
@@ -131,6 +149,27 @@ Installations from Buffer Tank Energy v1.x are migrated automatically on first s
 | Probe (with `entity_id`) | *none* | The referenced HA entity is reused as-is |
 | Probe (without `entity_id`) | `sensor` | Virtual probe — interpolated temperature |
 | Threshold | `binary_sensor` | `on` when the referenced probe ≥ minimum temperature (with hysteresis) |
+
+## Card integration
+
+For a visual cross-section rendering of the tank, use the companion Lovelace card [`ha-buffer-tank-card`](https://github.com/timzifer/ha-buffer-tank-card). It reads everything it needs from the `state_of_charge` sensor's state attributes — no service calls, no YAML duplication.
+
+The `sensor.{tank}_state_of_charge` entity exposes the following attributes:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `max_temperature` | float | Temperature defining 100 % SoC |
+| `max_energy_kwh` | float | Capacity at `max_temperature` |
+| `current_energy_kwh` | float | Present stored energy |
+| `reference_temperature` | float | Energy baseline (°C) |
+| `layers` | list[float] | 100 layer temperatures, bottom → top |
+| `tank_height_mm` | int | Tank height in mm |
+| `tank_volume_l` | int | Tank volume in litres |
+| `thermocline_position_mm` | float \| null | Height of the thermocline centre |
+| `thermocline_thickness_mm` | float \| null | Vertical extent of the thermocline |
+| `probes` | list[dict] | All probes (physical + virtual), sorted top → bottom: `{name, position_mm, temperature, virtual, entity_id}` |
+
+Flat profiles (spread < 0.5 K) report `null` for both thermocline fields; the card gracefully hides the thermocline overlay in that case.
 
 ## License
 
