@@ -1,11 +1,12 @@
 {
   "domain": "buffer_tank_energy",
   "name": "Buffer Tank Energy",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "codeowners": ["@timzifer"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/timzifer/ha-buffer-tank-energy",
   "iot_class": "calculated",
+  "min_ha_version": "2025.1",
   "requirements": []
 }
