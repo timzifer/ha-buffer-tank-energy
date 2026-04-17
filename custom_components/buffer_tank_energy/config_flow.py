@@ -31,6 +31,7 @@ from .const import (
     CONF_EMA_SMOOTHING,
     CONF_INSULATION_R_VALUE,
     CONF_MAX_TEMPERATURE,
+    CONF_PROBE_EMA_SMOOTHING,
     CONF_PROBE_ENTITY,
     CONF_PROBE_NAME,
     CONF_PROBE_POSITION,
@@ -44,6 +45,7 @@ from .const import (
     CONFIG_ENTRY_VERSION,
     DEFAULT_EMA_SMOOTHING,
     DEFAULT_MAX_TEMPERATURE,
+    DEFAULT_PROBE_EMA_SMOOTHING,
     DEFAULT_THRESHOLD_HYSTERESIS,
     DOMAIN,
     SUBENTRY_PROBE,
@@ -247,6 +249,7 @@ class ProbeSubentryFlow(ConfigSubentryFlow):
                     CONF_PROBE_NAME: user_input[CONF_PROBE_NAME],
                     CONF_PROBE_POSITION: position,
                     CONF_PROBE_ENTITY: user_input.get(CONF_PROBE_ENTITY) or None,
+                    CONF_PROBE_EMA_SMOOTHING: user_input[CONF_PROBE_EMA_SMOOTHING],
                 }
                 title = clean[CONF_PROBE_NAME]
                 if reconfigure:
@@ -284,6 +287,19 @@ class ProbeSubentryFlow(ConfigSubentryFlow):
                     },
                 ): EntitySelector(
                     EntitySelectorConfig(domain=["sensor", "input_number"])
+                ),
+                vol.Optional(
+                    CONF_PROBE_EMA_SMOOTHING,
+                    default=defaults.get(
+                        CONF_PROBE_EMA_SMOOTHING, DEFAULT_PROBE_EMA_SMOOTHING
+                    ),
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0.05,
+                        max=1.0,
+                        step=0.05,
+                        mode=NumberSelectorMode.SLIDER,
+                    )
                 ),
             }
         )

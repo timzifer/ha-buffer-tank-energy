@@ -2,8 +2,11 @@
 
 DOMAIN = "buffer_tank_energy"
 
-# Config entry version (bumped when migrating legacy sensor list to subentries).
-CONFIG_ENTRY_VERSION = 2
+# Config entry version.
+#   v1 -> v2: legacy sensor list is migrated into probe subentries.
+#   v2 -> v3: stale tank-device ↔ probe/threshold subentry associations left
+#             behind by older releases are cleared.
+CONFIG_ENTRY_VERSION = 3
 
 # Subentry types
 SUBENTRY_PROBE = "probe"
@@ -22,6 +25,7 @@ CONF_EMA_SMOOTHING = "ema_smoothing"  # EMA alpha factor for power sensors
 CONF_PROBE_NAME = "name"
 CONF_PROBE_POSITION = "position"  # mm from bottom
 CONF_PROBE_ENTITY = "entity_id"  # optional — empty means virtual probe
+CONF_PROBE_EMA_SMOOTHING = "ema_smoothing"  # EMA alpha for virtual probe smoothing
 
 # Threshold subentry keys
 CONF_THRESHOLD_NAME = "name"
@@ -36,6 +40,7 @@ LEGACY_CONF_SENSOR_POSITION = "sensor_position"
 
 DEFAULT_MAX_TEMPERATURE = 80.0  # °C
 DEFAULT_EMA_SMOOTHING = 0.2  # Good balance of noise damping and responsiveness
+DEFAULT_PROBE_EMA_SMOOTHING = 1.0  # 1.0 = no smoothing, passes raw value through
 DEFAULT_THRESHOLD_HYSTERESIS = 2.0  # K
 
 # Physics constants
