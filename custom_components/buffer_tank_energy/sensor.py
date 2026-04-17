@@ -274,18 +274,42 @@ class BufferTankStateOfChargeSensor(_BufferTankEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, object] | None:
-        """Expose SoC supporting numbers."""
+        """Expose SoC supporting numbers and profile data for card rendering."""
         data = self.coordinator.data
         if not data or not data.ready:
             return None
         max_energy = calculate_max_energy(
             self.coordinator.geometry, self._max_temperature, data.ref_temp
         )
+        tc = data.thermocline
         return {
             "max_temperature": self._max_temperature,
             "max_energy_kwh": round(max_energy, 2),
             "current_energy_kwh": round(data.energy_kwh, 2),
             "reference_temperature": round(data.ref_temp, 1),
+            "layers": [round(t, 1) for t in data.profile],
+            "tank_height_mm": int(self._entry.data[CONF_TANK_HEIGHT]),
+            "tank_volume_l": int(self._entry.data[CONF_TANK_VOLUME]),
+            "thermocline_position_mm": (
+                round(tc.position_m * 1000) if tc else None
+            ),
+            "thermocline_thickness_mm": (
+                round(tc.thickness_m * 1000) if tc else None
+            ),
+            "probes": [
+                {
+                    "name": p.name,
+                    "position_mm": int(round(p.position_m * 1000)),
+                    "temperature": (
+                        round(data.probe_temps[p.subentry_id], 1)
+                        if p.subentry_id in data.probe_temps
+                        else None
+                    ),
+                    "virtual": p.entity_id is None,
+                    "entity_id": p.entity_id,
+                }
+                for p in reversed(self.coordinator.probes)
+            ],
         }
 
 

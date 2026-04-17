@@ -124,6 +124,39 @@ Installations from Buffer Tank Energy v1.x are migrated automatically on first s
 
 \* *Only created when both ambient temperature sensor and R-value are configured.*
 
+### Thermocline & Stratification Metrics
+
+Four thermocline sensors describe the position, shape and strength of the steepest temperature transition in the 100-layer profile:
+
+| Sensor | Unit | Description |
+|--------|------|-------------|
+| `_thermocline_position` | % | Height of the steepest vertical gradient, relative to tank height (0 % = bottom, 100 % = top). Also exposes `position_mm` as an attribute. |
+| `_thermocline_strength` | K/m | Peak absolute vertical temperature gradient (\|dT/dz\|). |
+| `_thermocline_thickness` | % | Vertical extent of the transition zone around the peak gradient, as a fraction of tank height. Also exposes `thickness_mm`. |
+| `_thermocline_sharpness` | K/m² | Peak gradient divided by thermocline thickness — a larger value means a more compact, clearly defined layer. |
+
+Three stratification sensors score the overall quality of the temperature layering on a 0 – 100 % scale:
+
+| Sensor | Unit | Description |
+|--------|------|-------------|
+| `_stratification_index` | % | Composite score combining temperature span, monotonicity and gradient concentration. Attributes expose the raw components (`temperature_span_k`, `span_normalized`, `monotonicity`, `gradient_concentration`). |
+| `_stratification_monotonicity` | % | How consistently the temperature increases from bottom to top (100 % = perfectly monotonic). |
+| `_gradient_concentration` | % | How concentrated the temperature change is around a single transition (100 % = all change in one thin layer, 0 % = evenly distributed). |
+
+A tank with a sharp, high-up thermocline and a high stratification index is well-charged with minimal mixing — ideal for peak heating efficiency.
+
+### Card integration
+
+The **State of Charge** sensor exposes additional attributes intended for custom Lovelace cards that visualise the tank profile, thermocline and probe placement without needing to query the coordinator directly:
+
+| Attribute | Description |
+|-----------|-------------|
+| `layers` | 100 floats (°C, rounded to 0.1), bottom → top, one per 1 % slice of the tank. |
+| `tank_height_mm` / `tank_volume_l` | Tank geometry for scaling. |
+| `thermocline_position_mm` | Height of the peak gradient from the tank bottom (`null` when no thermocline detected). |
+| `thermocline_thickness_mm` | Thickness of the transition zone (`null` when no thermocline detected). |
+| `probes` | List of probes, **sorted top → bottom**, with `name`, `position_mm`, `temperature`, `virtual` (true = interpolated), and `entity_id` (null for virtual probes). |
+
 ### Per-subentry entities
 
 | Subentry | Entity type | Description |
