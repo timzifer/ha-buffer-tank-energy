@@ -7,6 +7,7 @@ import uuid
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_PROBE_ENTITY,
@@ -55,7 +56,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate legacy (v1) config entries to the subentry-based layout."""
+    """Migrate older config entries to the current layout."""
     if entry.version >= CONFIG_ENTRY_VERSION:
         return True
 
@@ -66,12 +67,21 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CONFIG_ENTRY_VERSION,
     )
 
+    if entry.version < 2:
+        _migrate_v1_to_v2(hass, entry)
+
+    if entry.version < 3:
+        _migrate_v2_to_v3(hass, entry)
+
+    hass.config_entries.async_update_entry(entry, version=CONFIG_ENTRY_VERSION)
+    return True
+
+
+def _migrate_v1_to_v2(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Move the legacy sensor list into probe subentries."""
     legacy_sensors = list(entry.data.get(LEGACY_CONF_SENSORS, []))
     new_data = {k: v for k, v in entry.data.items() if k != LEGACY_CONF_SENSORS}
-
-    hass.config_entries.async_update_entry(
-        entry, data=new_data, version=CONFIG_ENTRY_VERSION
-    )
+    hass.config_entries.async_update_entry(entry, data=new_data)
 
     for index, sensor in enumerate(legacy_sensors, start=1):
         entity_id = sensor.get(LEGACY_CONF_SENSOR_ENTITY)
@@ -93,4 +103,39 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.info(
         "Migrated %d legacy sensor(s) into probe subentries", len(legacy_sensors)
     )
-    return True
+
+
+def _migrate_v2_to_v3(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Detach the tank device from any probe/threshold subentries.
+
+    Older releases registered virtual-probe and threshold entities using the
+    tank's DeviceInfo while still passing ``config_subentry_id``. Home
+    Assistant then linked the shared tank device to each of those subentries.
+    Deleting the subentry afterwards would try to remove the tank device as
+    well. This migration drops every subentry link from the tank device so
+    only the current child-device links remain.
+    """
+    dev_reg = dr.async_get(hass)
+    tank_device = dev_reg.async_get_device(
+        identifiers={(DOMAIN, entry.entry_id)}
+    )
+    if tank_device is None:
+        return
+
+    stale = [
+        sid
+        for sid in tank_device.config_entries_subentries.get(entry.entry_id, set())
+        if sid is not None
+    ]
+    for subentry_id in stale:
+        dev_reg.async_update_device(
+            tank_device.id,
+            remove_config_entry_id=entry.entry_id,
+            remove_config_subentry_id=subentry_id,
+        )
+
+    if stale:
+        _LOGGER.info(
+            "Detached tank device from %d stale subentry association(s)",
+            len(stale),
+        )

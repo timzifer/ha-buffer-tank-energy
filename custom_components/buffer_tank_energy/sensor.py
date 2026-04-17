@@ -27,12 +27,14 @@ from .const import (
     CONF_EMA_SMOOTHING,
     CONF_INSULATION_R_VALUE,
     CONF_MAX_TEMPERATURE,
+    CONF_PROBE_EMA_SMOOTHING,
     CONF_PROBE_ENTITY,
     CONF_PROBE_NAME,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
     DEFAULT_EMA_SMOOTHING,
     DEFAULT_MAX_TEMPERATURE,
+    DEFAULT_PROBE_EMA_SMOOTHING,
     DOMAIN,
     SUBENTRY_PROBE,
 )
@@ -699,7 +701,9 @@ class BufferTankThermoclineSharpnessSensor(_BufferTankEntity):
         return round(data.thermocline.sharpness_k_per_m2, 2)
 
 
-class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], SensorEntity):
+class BufferTankVirtualProbeSensor(
+    CoordinatorEntity[BufferTankCoordinator], SensorEntity, RestoreEntity
+):
     """Virtual probe that reports an interpolated temperature at a fixed height."""
 
     _attr_has_entity_name = True
@@ -721,12 +725,54 @@ class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], Sen
         self._attr_unique_id = f"{entry.entry_id}_probe_{subentry.subentry_id}"
         self._attr_name = None
         self._attr_device_info = device_info
+        alpha = subentry.data.get(
+            CONF_PROBE_EMA_SMOOTHING, DEFAULT_PROBE_EMA_SMOOTHING
+        )
+        self._ema_alpha = max(0.0, min(1.0, float(alpha)))
+        self._ema_value: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Seed the EMA with the last state so smoothing survives restarts."""
+        if (last_state := await self.async_get_last_state()) is not None:
+            try:
+                self._ema_value = float(last_state.state)
+            except (ValueError, TypeError):
+                self._ema_value = None
+        await super().async_added_to_hass()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Advance the EMA toward the new interpolated sample."""
+        data = self.coordinator.data
+        if data and data.ready:
+            raw = data.probe_temps.get(self._subentry_id)
+            if raw is not None:
+                if self._ema_alpha >= 1.0 or self._ema_value is None:
+                    self._ema_value = raw
+                else:
+                    self._ema_value = (
+                        self._ema_alpha * raw
+                        + (1.0 - self._ema_alpha) * self._ema_value
+                    )
+        super()._handle_coordinator_update()
 
     @property
     def native_value(self) -> float | None:
-        """Return the interpolated probe temperature."""
-        data = self.coordinator.data
-        if not data or not data.ready:
+        """Return the smoothed probe temperature."""
+        if self._ema_value is None:
             return None
-        temp = data.probe_temps.get(self._subentry_id)
-        return round(temp, 1) if temp is not None else None
+        return round(self._ema_value, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, object] | None:
+        """Expose the raw (unsmoothed) sample and smoothing factor."""
+        data = self.coordinator.data
+        raw = (
+            data.probe_temps.get(self._subentry_id)
+            if data and data.ready
+            else None
+        )
+        return {
+            "ema_smoothing": self._ema_alpha,
+            "raw_temperature": round(raw, 1) if raw is not None else None,
+        }

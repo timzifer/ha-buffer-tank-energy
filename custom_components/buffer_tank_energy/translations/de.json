@@ -62,12 +62,14 @@
           "data": {
             "name": "Name",
             "position": "Position (vom Boden)",
-            "entity_id": "Temperatursensor (optional)"
+            "entity_id": "Temperatursensor (optional)",
+            "ema_smoothing": "Glättung (virtuelle Sonde)"
           },
           "data_description": {
             "name": "Anzeigename für diese Sonde.",
             "position": "Vertikale Position der Sonde in Millimetern, gemessen vom Boden des Tanks.",
-            "entity_id": "Sensor, der die Temperatur an dieser Position liefert. Leer lassen für eine virtuelle Sonde."
+            "entity_id": "Sensor, der die Temperatur an dieser Position liefert. Leer lassen für eine virtuelle Sonde.",
+            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter. Wird bei physischen Sonden ignoriert."
           }
         },
         "reconfigure": {
@@ -76,12 +78,14 @@
           "data": {
             "name": "Name",
             "position": "Position (vom Boden)",
-            "entity_id": "Temperatursensor (optional)"
+            "entity_id": "Temperatursensor (optional)",
+            "ema_smoothing": "Glättung (virtuelle Sonde)"
           },
           "data_description": {
             "name": "Anzeigename für diese Sonde.",
             "position": "Vertikale Position der Sonde in Millimetern.",
-            "entity_id": "Sensor, der die Temperatur liefert. Leer lassen für eine virtuelle Sonde."
+            "entity_id": "Sensor, der die Temperatur liefert. Leer lassen für eine virtuelle Sonde.",
+            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter."
           }
         }
       },

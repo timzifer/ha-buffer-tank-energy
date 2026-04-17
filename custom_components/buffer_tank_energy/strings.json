@@ -62,12 +62,14 @@
           "data": {
             "name": "Name",
             "position": "Position (from bottom)",
-            "entity_id": "Temperature Sensor (optional)"
+            "entity_id": "Temperature Sensor (optional)",
+            "ema_smoothing": "Smoothing factor (virtual probe)"
           },
           "data_description": {
             "name": "Friendly name shown for this probe.",
             "position": "Vertical position of the probe in millimeters, measured from the bottom of the tank.",
-            "entity_id": "Sensor providing the temperature at this position. Leave empty for a virtual probe."
+            "entity_id": "Sensor providing the temperature at this position. Leave empty for a virtual probe.",
+            "ema_smoothing": "EMA alpha used to smooth the virtual probe value. 1.0 = no smoothing, lower = smoother. Ignored for physical probes."
           }
         },
         "reconfigure": {
@@ -76,12 +78,14 @@
           "data": {
             "name": "Name",
             "position": "Position (from bottom)",
-            "entity_id": "Temperature Sensor (optional)"
+            "entity_id": "Temperature Sensor (optional)",
+            "ema_smoothing": "Smoothing factor (virtual probe)"
           },
           "data_description": {
             "name": "Friendly name shown for this probe.",
             "position": "Vertical position of the probe in millimeters.",
-            "entity_id": "Sensor providing the temperature. Leave empty for a virtual probe."
+            "entity_id": "Sensor providing the temperature. Leave empty for a virtual probe.",
+            "ema_smoothing": "EMA alpha used to smooth the virtual probe value. 1.0 = no smoothing, lower = smoother."
           }
         }
       },
