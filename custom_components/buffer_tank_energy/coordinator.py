@@ -16,19 +16,27 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .calculator import (
+    DEFAULT_STRATIFICATION_REFERENCE_SPAN_K,
+    StratificationMetrics,
     TankGeometry,
+    ThermoclineMetrics,
     calculate_average_temperature,
     calculate_stored_energy,
+    calculate_stratification,
     calculate_temperature_spread,
+    calculate_thermocline,
     determine_reference_temperature,
+    sample_temperature_profile,
 )
 from .const import (
     CONF_AMBIENT_TEMP_ENTITY,
+    CONF_MAX_TEMPERATURE,
     CONF_PROBE_ENTITY,
     CONF_PROBE_POSITION,
     CONF_RETURN_TEMP_ENTITY,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
+    DEFAULT_MAX_TEMPERATURE,
     DOMAIN,
     SUBENTRY_PROBE,
 )
@@ -59,6 +67,8 @@ class CoordinatorData:
     probe_temps: dict[str, float] = field(default_factory=dict)
     return_temp: float | None = None
     ambient_temp: float | None = None
+    stratification: StratificationMetrics | None = None
+    thermocline: ThermoclineMetrics | None = None
     ready: bool = False
 
 
@@ -79,6 +89,9 @@ class BufferTankCoordinator(DataUpdateCoordinator[CoordinatorData]):
         )
         self._return_temp_entity: str | None = entry.data.get(CONF_RETURN_TEMP_ENTITY)
         self._ambient_temp_entity: str | None = entry.data.get(CONF_AMBIENT_TEMP_ENTITY)
+        self._max_temperature: float = entry.data.get(
+            CONF_MAX_TEMPERATURE, DEFAULT_MAX_TEMPERATURE
+        )
         self.probes: list[ProbeConfig] = self._load_probes()
         self._startup_ready = False
 
@@ -184,6 +197,16 @@ class BufferTankCoordinator(DataUpdateCoordinator[CoordinatorData]):
             self.geometry, readings, ref_temp
         )
 
+        samples = sample_temperature_profile(readings, self.geometry.height_m)
+        stratification: StratificationMetrics | None = None
+        thermocline: ThermoclineMetrics | None = None
+        if samples is not None:
+            reference_span = self._max_temperature - ref_temp
+            if reference_span <= 0:
+                reference_span = DEFAULT_STRATIFICATION_REFERENCE_SPAN_K
+            stratification = calculate_stratification(samples, reference_span)
+            thermocline = calculate_thermocline(samples)
+
         probe_temps: dict[str, float] = {}
         layer_height = self.geometry.height_m / len(profile) if profile else 0.0
         for probe in self.probes:
@@ -208,6 +231,8 @@ class BufferTankCoordinator(DataUpdateCoordinator[CoordinatorData]):
             probe_temps=probe_temps,
             return_temp=return_temp,
             ambient_temp=ambient_temp,
+            stratification=stratification,
+            thermocline=thermocline,
             ready=True,
         )
 
