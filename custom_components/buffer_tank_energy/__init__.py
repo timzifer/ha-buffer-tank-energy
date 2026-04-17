@@ -7,6 +7,7 @@ import uuid
 
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_PROBE_ENTITY,
@@ -34,11 +35,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    _detach_tank_from_subentries(hass, entry)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
     return True
+
+
+def _detach_tank_from_subentries(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Strip stale subentry references from the tank device.
+
+    Older versions of this integration registered probe/threshold entities
+    against the tank device itself. Those device↔subentry links persist in
+    the device registry even after the entities move to per-subentry child
+    devices, which makes the UI show the tank device under every subentry
+    and risks it being deleted when a subentry is removed.
+    """
+    device_reg = dr.async_get(hass)
+    device = device_reg.async_get_device(
+        identifiers={(DOMAIN, entry.entry_id)}
+    )
+    if device is None:
+        return
+    linked = device.config_entries_subentries.get(entry.entry_id, set())
+    for subentry_id in linked - {None}:
+        device_reg.async_update_device(
+            device.id,
+            remove_config_entry_id=entry.entry_id,
+            remove_config_subentry_id=subentry_id,
+        )
+        _LOGGER.debug(
+            "Detached tank device %s from stale subentry %s",
+            device.id,
+            subentry_id,
+        )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
