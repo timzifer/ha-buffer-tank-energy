@@ -82,8 +82,13 @@ async def async_setup_entry(
         if subentry.data.get(CONF_PROBE_ENTITY):
             # Physical probe already exposed by its source entity — no HA entity here.
             continue
+        probe_device_info = _probe_device_info(entry, subentry)
         async_add_entities(
-            [BufferTankVirtualProbeSensor(coordinator, entry, subentry, device_info)],
+            [
+                BufferTankVirtualProbeSensor(
+                    coordinator, entry, subentry, probe_device_info
+                )
+            ],
             config_subentry_id=subentry_id,
         )
 
@@ -95,6 +100,19 @@ def _tank_device_info(entry: ConfigEntry) -> DeviceInfo:
         name=entry.title,
         manufacturer="Buffer Tank Energy",
         model=f"{entry.data[CONF_TANK_VOLUME]}L / {entry.data[CONF_TANK_HEIGHT]}mm",
+        entry_type=DeviceEntryType.SERVICE,
+    )
+
+
+def _probe_device_info(entry: ConfigEntry, subentry: ConfigSubentry) -> DeviceInfo:
+    """Return device info for a virtual-probe subentry, linked to the tank."""
+    name = subentry.data.get(CONF_PROBE_NAME) or subentry.title
+    return DeviceInfo(
+        identifiers={(DOMAIN, f"{entry.entry_id}_probe_{subentry.subentry_id}")},
+        name=name,
+        manufacturer="Buffer Tank Energy",
+        model="Virtual probe",
+        via_device=(DOMAIN, entry.entry_id),
         entry_type=DeviceEntryType.SERVICE,
     )
 
@@ -701,7 +719,7 @@ class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], Sen
         super().__init__(coordinator)
         self._subentry_id = subentry.subentry_id
         self._attr_unique_id = f"{entry.entry_id}_probe_{subentry.subentry_id}"
-        self._attr_name = subentry.data.get(CONF_PROBE_NAME, subentry.title)
+        self._attr_name = None
         self._attr_device_info = device_info
 
     @property
