@@ -2,108 +2,133 @@
   "config": {
     "step": {
       "user": {
-        "title": "Tank Dimensions",
-        "description": "Configure the physical dimensions of your buffer tank.",
+        "title": "Buffer Tank",
+        "description": "Configure the physical properties of your buffer tank. Temperature sensors and thresholds are added afterwards as subentries from the integration card.",
         "data": {
           "tank_volume": "Tank Volume",
-          "tank_height": "Tank Height"
+          "tank_height": "Tank Height",
+          "max_temperature": "Maximum Temperature (SoC)",
+          "ema_smoothing": "Power Smoothing Factor",
+          "return_temp_entity": "Return Temperature Sensor",
+          "ambient_temp_entity": "Ambient Temperature Sensor",
+          "insulation_r_value": "Insulation R-Value"
         },
         "data_description": {
           "tank_volume": "Total water volume of the buffer tank in liters.",
-          "tank_height": "Total height of the buffer tank in millimeters."
-        }
-      },
-      "sensors": {
-        "title": "Temperature Sensors",
-        "description": "Add a temperature sensor to the buffer tank. Sensors added so far: {count}.",
-        "data": {
-          "sensor_entity": "Temperature Sensor",
-          "sensor_position": "Sensor Position (from bottom)",
-          "add_another": "Add another sensor"
-        },
-        "data_description": {
-          "sensor_entity": "Select a temperature sensor entity.",
-          "sensor_position": "Height of the sensor measured from the bottom of the tank in millimeters.",
-          "add_another": "Check this to add another sensor after this one."
-        }
-      },
-      "optional": {
-        "title": "Optional Settings",
-        "description": "Configure optional sensors and insulation properties.",
-        "data": {
-          "return_temp_entity": "Return Temperature Sensor",
-          "ambient_temp_entity": "Ambient Temperature Sensor",
-          "insulation_r_value": "Insulation R-Value",
-          "max_temperature": "Maximum Temperature (SoC)",
-          "ema_smoothing": "Power Smoothing Factor"
-        },
-        "data_description": {
-          "return_temp_entity": "Sensor measuring the return water temperature. Used as reference for energy calculation.",
-          "ambient_temp_entity": "Sensor measuring the ambient temperature around the tank.",
-          "insulation_r_value": "Thermal resistance of the tank insulation in m²·K/W. Required together with ambient sensor to calculate heat loss.",
-          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C.",
-          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors. Lower values = smoother but slower response. Higher values = faster but noisier. 1.0 = no smoothing."
+          "tank_height": "Total height of the buffer tank in millimeters.",
+          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge.",
+          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors. Lower = smoother, higher = more responsive.",
+          "return_temp_entity": "Optional: sensor measuring the return water temperature. Used as reference for energy calculation.",
+          "ambient_temp_entity": "Optional: sensor measuring the ambient temperature around the tank.",
+          "insulation_r_value": "Optional: thermal resistance of the tank insulation in m²·K/W. Required together with ambient sensor to calculate heat loss."
         }
       }
-    },
-    "error": {
-      "min_two_sensors": "At least two temperature sensors are required.",
-      "position_exceeds_height": "Sensor position cannot exceed tank height."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Tank Dimensions",
-        "description": "Update the physical dimensions of your buffer tank. Currently configured sensors: {sensor_count}.",
+        "title": "Buffer Tank",
+        "description": "Update the physical properties of your buffer tank. To add or remove probes and thresholds, use the subentry buttons on the integration card.",
         "data": {
           "tank_volume": "Tank Volume",
           "tank_height": "Tank Height",
-          "reconfigure_sensors": "Reconfigure sensors"
+          "max_temperature": "Maximum Temperature (SoC)",
+          "ema_smoothing": "Power Smoothing Factor",
+          "return_temp_entity": "Return Temperature Sensor",
+          "ambient_temp_entity": "Ambient Temperature Sensor",
+          "insulation_r_value": "Insulation R-Value"
         },
         "data_description": {
           "tank_volume": "Total water volume of the buffer tank in liters.",
           "tank_height": "Total height of the buffer tank in millimeters.",
-          "reconfigure_sensors": "Enable this to clear all existing sensors and set them up again. Leave unchecked to keep your current sensor configuration."
-        }
-      },
-      "sensors": {
-        "title": "Temperature Sensors",
-        "description": "Add a temperature sensor to the buffer tank. Sensors added so far: {count}.",
-        "data": {
-          "sensor_entity": "Temperature Sensor",
-          "sensor_position": "Sensor Position (from bottom)",
-          "add_another": "Add another sensor"
-        },
-        "data_description": {
-          "sensor_entity": "Select a temperature sensor entity.",
-          "sensor_position": "Height of the sensor measured from the bottom of the tank in millimeters.",
-          "add_another": "Check this to add another sensor after this one."
-        }
-      },
-      "optional": {
-        "title": "Optional Settings",
-        "description": "Configure optional sensors and insulation properties.",
-        "data": {
-          "return_temp_entity": "Return Temperature Sensor",
-          "ambient_temp_entity": "Ambient Temperature Sensor",
-          "insulation_r_value": "Insulation R-Value",
-          "max_temperature": "Maximum Temperature (SoC)",
-          "ema_smoothing": "Power Smoothing Factor"
-        },
-        "data_description": {
-          "return_temp_entity": "Sensor measuring the return water temperature. Used as reference for energy calculation.",
-          "ambient_temp_entity": "Sensor measuring the ambient temperature around the tank.",
-          "insulation_r_value": "Thermal resistance of the tank insulation in m²·K/W. Required together with ambient sensor to calculate heat loss.",
-          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge. Default: 80°C.",
-          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors. Lower values = smoother but slower response. Higher values = faster but noisier. 1.0 = no smoothing."
+          "max_temperature": "Maximum water temperature used to calculate 100% State of Charge.",
+          "ema_smoothing": "Smoothing factor (EMA alpha) for power sensors.",
+          "return_temp_entity": "Optional: sensor measuring the return water temperature.",
+          "ambient_temp_entity": "Optional: sensor measuring the ambient temperature around the tank.",
+          "insulation_r_value": "Optional: thermal resistance of the tank insulation in m²·K/W."
         }
       }
+    }
+  },
+  "config_subentries": {
+    "probe": {
+      "initiate_flow": { "user": "Add probe" },
+      "entry_type": "Probe",
+      "step": {
+        "user": {
+          "title": "Add Temperature Probe",
+          "description": "Configure a temperature probe. Leave the sensor entity empty to create a virtual probe that interpolates its temperature from the tank profile. Tank height: {tank_height} mm.",
+          "data": {
+            "name": "Name",
+            "position": "Position (from bottom)",
+            "entity_id": "Temperature Sensor (optional)"
+          },
+          "data_description": {
+            "name": "Friendly name shown for this probe.",
+            "position": "Vertical position of the probe in millimeters, measured from the bottom of the tank.",
+            "entity_id": "Sensor providing the temperature at this position. Leave empty for a virtual probe."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit Temperature Probe",
+          "description": "Update this probe. Tank height: {tank_height} mm.",
+          "data": {
+            "name": "Name",
+            "position": "Position (from bottom)",
+            "entity_id": "Temperature Sensor (optional)"
+          },
+          "data_description": {
+            "name": "Friendly name shown for this probe.",
+            "position": "Vertical position of the probe in millimeters.",
+            "entity_id": "Sensor providing the temperature. Leave empty for a virtual probe."
+          }
+        }
+      },
+      "error": {
+        "position_exceeds_height": "Probe position cannot exceed tank height."
+      }
     },
-    "error": {
-      "min_two_sensors": "At least two temperature sensors are required.",
-      "position_exceeds_height": "Sensor position cannot exceed tank height.",
-      "sensors_exceed_new_height": "Some existing sensor positions exceed the new tank height. Increase the height or enable 'Reconfigure sensors' to set up sensors again."
+    "threshold": {
+      "initiate_flow": { "user": "Add threshold" },
+      "entry_type": "Threshold",
+      "step": {
+        "user": {
+          "title": "Add Threshold",
+          "description": "Add a binary threshold that switches when a probe temperature crosses the configured limits.",
+          "data": {
+            "name": "Name",
+            "probe_subentry_id": "Reference probe",
+            "min_temp": "Minimum temperature",
+            "hysteresis": "Hysteresis"
+          },
+          "data_description": {
+            "name": "Friendly name for the threshold entity.",
+            "probe_subentry_id": "Probe whose temperature is compared against the threshold.",
+            "min_temp": "Turns on when the temperature reaches or exceeds this value.",
+            "hysteresis": "Turns off when the temperature drops below min − hysteresis."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit Threshold",
+          "description": "Update the threshold parameters.",
+          "data": {
+            "name": "Name",
+            "probe_subentry_id": "Reference probe",
+            "min_temp": "Minimum temperature",
+            "hysteresis": "Hysteresis"
+          },
+          "data_description": {
+            "name": "Friendly name for the threshold entity.",
+            "probe_subentry_id": "Probe whose temperature is compared against the threshold.",
+            "min_temp": "Turns on when the temperature reaches or exceeds this value.",
+            "hysteresis": "Turns off when the temperature drops below min − hysteresis."
+          }
+        }
+      },
+      "abort": {
+        "no_probes": "Add at least one probe subentry before creating a threshold."
+      }
     }
   },
   "entity": {

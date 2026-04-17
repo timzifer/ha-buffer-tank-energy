@@ -4,6 +4,8 @@
 
 A [Home Assistant](https://www.home-assistant.io/) custom integration that calculates stored thermal energy, charge/discharge power, heat loss and more for hot water buffer tanks — based on multiple temperature sensors at different heights.
 
+> **Requires Home Assistant 2025.1 or newer** (uses the subentry config-flow API introduced in that release).
+
 ## Features
 
 - **Stored Energy (kWh)** — Total thermal energy stored in the tank, calculated from a 100-layer temperature profile with linear interpolation between sensors.
@@ -66,31 +68,49 @@ The charge/discharge power and heat loss sensors apply an **Exponential Moving A
 
 ## Configuration
 
-The integration is configured via the UI — no YAML needed.
+The integration is configured via the UI in two stages — no YAML needed.
 
-### Step 1: Tank Dimensions
+### 1. Create the tank
 
-- **Tank Volume** (liters) — total water volume of the tank
-- **Tank Height** (mm) — total height of the tank
+From **Settings → Devices & Services → Add Integration**, pick **Buffer Tank Energy** and configure:
 
-### Step 2: Temperature Sensors
-
-Add at least **2 temperature sensors** at different heights. For each sensor:
-
-- **Sensor Entity** — a `sensor.*` or `input_number.*` entity providing temperature in °C
-- **Position** (mm from bottom) — the physical height of the sensor in the tank
-
-### Step 3: Optional Settings
-
-- **Return Temperature Sensor** — return water temperature, used as energy reference
-- **Ambient Temperature Sensor** — ambient air temperature around the tank
-- **Insulation R-Value** (m²·K/W) — thermal resistance of insulation (required for heat loss calculation, together with ambient sensor)
-- **Maximum Temperature** (°C) — temperature representing 100% SoC (default: 80°C)
+- **Tank Volume** (liters) — total water volume
+- **Tank Height** (mm) — total height
+- **Maximum Temperature** (°C) — temperature representing 100 % SoC (default: 80)
 - **Power Smoothing Factor** — EMA alpha for power sensors (default: 0.2)
+- *Optional* **Return Temperature Sensor** — used as the energy reference
+- *Optional* **Ambient Temperature Sensor** — tank surroundings
+- *Optional* **Insulation R-Value** (m²·K/W) — required together with the ambient sensor to enable heat-loss sensors
 
-All optional settings can be changed later via the integration's **Configure** button.
+These can all be changed later via the integration's **Configure** button.
 
-## Sensors Created
+### 2. Add probes as subentries
+
+Open the integration card and use **Add probe** to register each temperature measurement point:
+
+- **Name** — friendly label for the probe
+- **Position** (mm from bottom) — physical height inside the tank
+- **Temperature Sensor** — optional. If given, the probe reuses that existing entity; if left empty, a **virtual probe** sensor is created whose temperature is interpolated from the tank profile.
+
+At least **two physical probes** are needed for the energy sensors to report values.
+
+### 3. Add thresholds (optional)
+
+Thresholds are binary sensors that switch on/off based on a probe's temperature. Use **Add threshold** on the integration card:
+
+- **Reference probe** — any probe subentry (physical or virtual)
+- **Minimum temperature** — the "on" threshold
+- **Hysteresis** (K) — offset below the minimum that triggers "off"
+
+Thresholds whose probe is deleted become `unavailable` — reassign them via **Reconfigure** on the threshold subentry.
+
+### Migration from older versions
+
+Installations from Buffer Tank Energy v1.x are migrated automatically on first startup: each configured sensor becomes a probe subentry. No manual steps required.
+
+## Entities Created
+
+### Tank-level sensors
 
 | Sensor | Unit | Description |
 |--------|------|-------------|
@@ -98,11 +118,19 @@ All optional settings can be changed later via the integration's **Configure** b
 | State of Charge | % | Energy as percentage of maximum capacity |
 | Charge/Discharge Power | kW | Rate of energy change (positive = charging) |
 | Average Temperature | °C | Mean temperature across all layers |
-| Temperature Spread | °C | Max - Min temperature |
-| Heat Loss | W | Estimated power lost through insulation* |
-| Cumulative Heat Loss | kWh | Total heat loss energy over time* |
+| Temperature Spread | °C | Max − Min temperature |
+| Heat Loss | W | Estimated power lost through insulation\* |
+| Cumulative Heat Loss | kWh | Total heat loss energy over time\* |
 
 \* *Only created when both ambient temperature sensor and R-value are configured.*
+
+### Per-subentry entities
+
+| Subentry | Entity type | Description |
+|----------|-------------|-------------|
+| Probe (with `entity_id`) | *none* | The referenced HA entity is reused as-is |
+| Probe (without `entity_id`) | `sensor` | Virtual probe — interpolated temperature |
+| Threshold | `binary_sensor` | `on` when the referenced probe ≥ minimum temperature (with hysteresis) |
 
 ## License
 

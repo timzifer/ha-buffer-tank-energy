@@ -2,108 +2,133 @@
   "config": {
     "step": {
       "user": {
-        "title": "Tank-Dimensionen",
-        "description": "Konfiguriere die physischen Abmessungen deines Pufferspeichers.",
+        "title": "Pufferspeicher",
+        "description": "Konfiguriere die physischen Eigenschaften deines Pufferspeichers. Temperatursensoren und Schwellwerte werden anschließend als Subentries auf der Integrations-Karte hinzugefügt.",
         "data": {
           "tank_volume": "Tankvolumen",
-          "tank_height": "Tankhöhe"
+          "tank_height": "Tankhöhe",
+          "max_temperature": "Maximaltemperatur (SoC)",
+          "ema_smoothing": "Leistungsglättung",
+          "return_temp_entity": "Rücklauftemperatur-Sensor",
+          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
+          "insulation_r_value": "Isolierung R-Wert"
         },
         "data_description": {
           "tank_volume": "Gesamtes Wasservolumen des Pufferspeichers in Litern.",
-          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern."
-        }
-      },
-      "sensors": {
-        "title": "Temperatursensoren",
-        "description": "Füge einen Temperatursensor zum Pufferspeicher hinzu. Bisher hinzugefügte Sensoren: {count}.",
-        "data": {
-          "sensor_entity": "Temperatursensor",
-          "sensor_position": "Sensorposition (vom Boden)",
-          "add_another": "Weiteren Sensor hinzufügen"
-        },
-        "data_description": {
-          "sensor_entity": "Wähle eine Temperatursensor-Entität aus.",
-          "sensor_position": "Höhe des Sensors gemessen vom Boden des Tanks in Millimetern.",
-          "add_another": "Aktiviere dies, um nach diesem einen weiteren Sensor hinzuzufügen."
-        }
-      },
-      "optional": {
-        "title": "Optionale Einstellungen",
-        "description": "Konfiguriere optionale Sensoren und Isolierungseigenschaften.",
-        "data": {
-          "return_temp_entity": "Rücklauftemperatur-Sensor",
-          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
-          "insulation_r_value": "Isolierung R-Wert",
-          "max_temperature": "Maximaltemperatur (SoC)",
-          "ema_smoothing": "Leistungsglättung"
-        },
-        "data_description": {
-          "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
-          "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
-          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen.",
-          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100% Ladezustand. Standard: 80°C.",
-          "ema_smoothing": "Glättungsfaktor (EMA Alpha) für Leistungssensoren. Niedrigere Werte = glatter aber langsamere Reaktion. Höhere Werte = schneller aber verrauschter. 1.0 = keine Glättung."
+          "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern.",
+          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100 % Ladezustand.",
+          "ema_smoothing": "Glättungsfaktor (EMA Alpha) für Leistungssensoren. Niedriger = glatter, höher = reaktiver.",
+          "return_temp_entity": "Optional: Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
+          "ambient_temp_entity": "Optional: Sensor zur Messung der Umgebungstemperatur um den Tank.",
+          "insulation_r_value": "Optional: Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen."
         }
       }
-    },
-    "error": {
-      "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
-      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Tank-Dimensionen",
-        "description": "Aktualisiere die physischen Abmessungen deines Pufferspeichers. Aktuell konfigurierte Sensoren: {sensor_count}.",
+        "title": "Pufferspeicher",
+        "description": "Aktualisiere die physischen Eigenschaften deines Pufferspeichers. Um Sonden und Schwellwerte zu verwalten, nutze die Subentry-Buttons auf der Integrations-Karte.",
         "data": {
           "tank_volume": "Tankvolumen",
           "tank_height": "Tankhöhe",
-          "reconfigure_sensors": "Sensoren neu konfigurieren"
+          "max_temperature": "Maximaltemperatur (SoC)",
+          "ema_smoothing": "Leistungsglättung",
+          "return_temp_entity": "Rücklauftemperatur-Sensor",
+          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
+          "insulation_r_value": "Isolierung R-Wert"
         },
         "data_description": {
           "tank_volume": "Gesamtes Wasservolumen des Pufferspeichers in Litern.",
           "tank_height": "Gesamthöhe des Pufferspeichers in Millimetern.",
-          "reconfigure_sensors": "Aktiviere dies, um alle bestehenden Sensoren zu löschen und neu einzurichten. Deaktiviert lassen, um die aktuelle Sensorkonfiguration beizubehalten."
-        }
-      },
-      "sensors": {
-        "title": "Temperatursensoren",
-        "description": "Füge einen Temperatursensor zum Pufferspeicher hinzu. Bisher hinzugefügte Sensoren: {count}.",
-        "data": {
-          "sensor_entity": "Temperatursensor",
-          "sensor_position": "Sensorposition (vom Boden)",
-          "add_another": "Weiteren Sensor hinzufügen"
-        },
-        "data_description": {
-          "sensor_entity": "Wähle eine Temperatursensor-Entität aus.",
-          "sensor_position": "Höhe des Sensors gemessen vom Boden des Tanks in Millimetern.",
-          "add_another": "Aktiviere dies, um nach diesem einen weiteren Sensor hinzuzufügen."
-        }
-      },
-      "optional": {
-        "title": "Optionale Einstellungen",
-        "description": "Konfiguriere optionale Sensoren und Isolierungseigenschaften.",
-        "data": {
-          "return_temp_entity": "Rücklauftemperatur-Sensor",
-          "ambient_temp_entity": "Umgebungstemperatur-Sensor",
-          "insulation_r_value": "Isolierung R-Wert",
-          "max_temperature": "Maximaltemperatur (SoC)",
-          "ema_smoothing": "Leistungsglättung"
-        },
-        "data_description": {
-          "return_temp_entity": "Sensor zur Messung der Rücklauftemperatur. Wird als Referenz für die Energieberechnung verwendet.",
-          "ambient_temp_entity": "Sensor zur Messung der Umgebungstemperatur um den Tank.",
-          "insulation_r_value": "Wärmewiderstand der Tankisolierung in m²·K/W. Zusammen mit dem Umgebungssensor erforderlich, um den Wärmeverlust zu berechnen.",
-          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100% Ladezustand. Standard: 80°C.",
-          "ema_smoothing": "Glättungsfaktor (EMA Alpha) für Leistungssensoren. Niedrigere Werte = glatter aber langsamere Reaktion. Höhere Werte = schneller aber verrauschter. 1.0 = keine Glättung."
+          "max_temperature": "Maximale Wassertemperatur zur Berechnung von 100 % Ladezustand.",
+          "ema_smoothing": "Glättungsfaktor (EMA Alpha) für Leistungssensoren.",
+          "return_temp_entity": "Optional: Sensor zur Messung der Rücklauftemperatur.",
+          "ambient_temp_entity": "Optional: Sensor zur Messung der Umgebungstemperatur um den Tank.",
+          "insulation_r_value": "Optional: Wärmewiderstand der Tankisolierung in m²·K/W."
         }
       }
+    }
+  },
+  "config_subentries": {
+    "probe": {
+      "initiate_flow": { "user": "Sonde hinzufügen" },
+      "entry_type": "Sonde",
+      "step": {
+        "user": {
+          "title": "Temperatursonde hinzufügen",
+          "description": "Konfiguriere eine Temperatursonde. Wird keine Sensor-Entität angegeben, wird eine virtuelle Sonde erstellt, die ihre Temperatur aus dem Tank-Profil interpoliert. Tankhöhe: {tank_height} mm.",
+          "data": {
+            "name": "Name",
+            "position": "Position (vom Boden)",
+            "entity_id": "Temperatursensor (optional)"
+          },
+          "data_description": {
+            "name": "Anzeigename für diese Sonde.",
+            "position": "Vertikale Position der Sonde in Millimetern, gemessen vom Boden des Tanks.",
+            "entity_id": "Sensor, der die Temperatur an dieser Position liefert. Leer lassen für eine virtuelle Sonde."
+          }
+        },
+        "reconfigure": {
+          "title": "Temperatursonde bearbeiten",
+          "description": "Sonde aktualisieren. Tankhöhe: {tank_height} mm.",
+          "data": {
+            "name": "Name",
+            "position": "Position (vom Boden)",
+            "entity_id": "Temperatursensor (optional)"
+          },
+          "data_description": {
+            "name": "Anzeigename für diese Sonde.",
+            "position": "Vertikale Position der Sonde in Millimetern.",
+            "entity_id": "Sensor, der die Temperatur liefert. Leer lassen für eine virtuelle Sonde."
+          }
+        }
+      },
+      "error": {
+        "position_exceeds_height": "Die Sondenposition darf die Tankhöhe nicht überschreiten."
+      }
     },
-    "error": {
-      "min_two_sensors": "Es werden mindestens zwei Temperatursensoren benötigt.",
-      "position_exceeds_height": "Die Sensorposition darf die Tankhöhe nicht überschreiten.",
-      "sensors_exceed_new_height": "Einige bestehende Sensorpositionen überschreiten die neue Tankhöhe. Erhöhe die Höhe oder aktiviere 'Sensoren neu konfigurieren', um die Sensoren neu einzurichten."
+    "threshold": {
+      "initiate_flow": { "user": "Schwellwert hinzufügen" },
+      "entry_type": "Schwellwert",
+      "step": {
+        "user": {
+          "title": "Schwellwert hinzufügen",
+          "description": "Füge einen binären Schwellwert hinzu, der schaltet, wenn eine Sondentemperatur die Grenzwerte überschreitet.",
+          "data": {
+            "name": "Name",
+            "probe_subentry_id": "Referenz-Sonde",
+            "min_temp": "Mindesttemperatur",
+            "hysteresis": "Hysterese"
+          },
+          "data_description": {
+            "name": "Anzeigename für den Schwellwert.",
+            "probe_subentry_id": "Sonde, deren Temperatur mit dem Schwellwert verglichen wird.",
+            "min_temp": "Schaltet ein, sobald die Temperatur diesen Wert erreicht oder überschreitet.",
+            "hysteresis": "Schaltet aus, wenn die Temperatur unter min − Hysterese fällt."
+          }
+        },
+        "reconfigure": {
+          "title": "Schwellwert bearbeiten",
+          "description": "Aktualisiere die Schwellwert-Parameter.",
+          "data": {
+            "name": "Name",
+            "probe_subentry_id": "Referenz-Sonde",
+            "min_temp": "Mindesttemperatur",
+            "hysteresis": "Hysterese"
+          },
+          "data_description": {
+            "name": "Anzeigename für den Schwellwert.",
+            "probe_subentry_id": "Sonde, deren Temperatur mit dem Schwellwert verglichen wird.",
+            "min_temp": "Schaltet ein, sobald die Temperatur diesen Wert erreicht oder überschreitet.",
+            "hysteresis": "Schaltet aus, wenn die Temperatur unter min − Hysterese fällt."
+          }
+        }
+      },
+      "abort": {
+        "no_probes": "Lege mindestens eine Sonde an, bevor du einen Schwellwert erstellst."
+      }
     }
   },
   "entity": {
