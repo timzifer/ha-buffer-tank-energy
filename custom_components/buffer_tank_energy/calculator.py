@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import bisect
 import math
 
 from .const import KJ_TO_KWH, NUM_LAYERS, WATER_DENSITY, WATER_SPECIFIC_HEAT
@@ -27,19 +28,98 @@ class TankGeometry:
         )
 
 
+def _dedupe_sorted_sensors(
+    sensors: list[tuple[float, float]],
+) -> tuple[list[float], list[float]]:
+    """Sort sensors by position and merge duplicates by averaging temperature."""
+    buckets: dict[float, list[float]] = {}
+    for pos, temp in sensors:
+        buckets.setdefault(pos, []).append(temp)
+    xs = sorted(buckets.keys())
+    ys = [sum(buckets[x]) / len(buckets[x]) for x in xs]
+    return xs, ys
+
+
+def _natural_cubic_spline_second_derivs(
+    xs: list[float], ys: list[float]
+) -> list[float]:
+    """Solve for the second derivatives at knots of a natural cubic spline.
+
+    Uses the Thomas algorithm on the tridiagonal system arising from the
+    continuity of the first derivative at interior knots, with the natural
+    boundary condition M[0] = M[n-1] = 0.
+    """
+    n = len(xs)
+    m = [0.0] * n
+    if n < 3:
+        return m
+
+    h = [xs[i + 1] - xs[i] for i in range(n - 1)]
+
+    # Tridiagonal system for interior M[1..n-2]
+    lower = [0.0] * (n - 2)
+    diag = [0.0] * (n - 2)
+    upper = [0.0] * (n - 2)
+    rhs = [0.0] * (n - 2)
+    for i in range(1, n - 1):
+        k = i - 1
+        lower[k] = h[i - 1]
+        diag[k] = 2.0 * (h[i - 1] + h[i])
+        upper[k] = h[i]
+        rhs[k] = 6.0 * (
+            (ys[i + 1] - ys[i]) / h[i] - (ys[i] - ys[i - 1]) / h[i - 1]
+        )
+
+    # Forward sweep
+    for k in range(1, n - 2):
+        factor = lower[k] / diag[k - 1]
+        diag[k] -= factor * upper[k - 1]
+        rhs[k] -= factor * rhs[k - 1]
+
+    # Back substitution
+    interior = [0.0] * (n - 2)
+    interior[-1] = rhs[-1] / diag[-1]
+    for k in range(n - 4, -1, -1):
+        interior[k] = (rhs[k] - upper[k] * interior[k + 1]) / diag[k]
+
+    for i, value in enumerate(interior, start=1):
+        m[i] = value
+    return m
+
+
+def _eval_cubic_spline_segment(
+    x: float,
+    i: int,
+    xs: list[float],
+    ys: list[float],
+    m: list[float],
+) -> float:
+    """Evaluate the natural cubic spline on segment [xs[i], xs[i+1]]."""
+    h = xs[i + 1] - xs[i]
+    a = xs[i + 1] - x
+    b = x - xs[i]
+    return (
+        m[i] * a**3 / (6.0 * h)
+        + m[i + 1] * b**3 / (6.0 * h)
+        + (ys[i] / h - m[i] * h / 6.0) * a
+        + (ys[i + 1] / h - m[i + 1] * h / 6.0) * b
+    )
+
+
 def interpolate_temperature_profile(
     sensors: list[tuple[float, float]],
     tank_height_m: float,
     num_layers: int = NUM_LAYERS,
 ) -> list[float]:
-    """Build a temperature profile by interpolating between sensors.
+    """Build a temperature profile using a natural cubic spline.
 
-    Sensors below the lowest sensor position use the lowest sensor temperature.
-    Sensors above the highest sensor position use the highest sensor temperature.
-    Between sensors, linear interpolation is used.
+    The spline is C1‑continuous, so temperature and slope match at every
+    sensor knot. Below the lowest and above the highest sensor the profile
+    is extended linearly using the spline's slope at the respective
+    boundary knot.
 
     Args:
-        sensors: List of (position_m, temperature_celsius) sorted by position.
+        sensors: List of (position_m, temperature_celsius).
         tank_height_m: Total tank height in meters.
         num_layers: Number of discrete layers.
 
@@ -49,36 +129,47 @@ def interpolate_temperature_profile(
     if not sensors:
         return [0.0] * num_layers
 
-    sorted_sensors = sorted(sensors, key=lambda s: s[0])
+    xs, ys = _dedupe_sorted_sensors(sensors)
+    n = len(xs)
     layer_height = tank_height_m / num_layers
+
+    if n == 1:
+        return [ys[0]] * num_layers
+
+    if n == 2:
+        slope = (ys[1] - ys[0]) / (xs[1] - xs[0])
+
+        def evaluate(h: float) -> float:
+            return ys[0] + slope * (h - xs[0])
+
+        return [evaluate((i + 0.5) * layer_height) for i in range(num_layers)]
+
+    second_derivs = _natural_cubic_spline_second_derivs(xs, ys)
+
+    h0 = xs[1] - xs[0]
+    h_last = xs[-1] - xs[-2]
+    slope_low = (ys[1] - ys[0]) / h0 - h0 / 6.0 * (
+        2.0 * second_derivs[0] + second_derivs[1]
+    )
+    slope_high = (ys[-1] - ys[-2]) / h_last + h_last / 6.0 * (
+        second_derivs[-2] + 2.0 * second_derivs[-1]
+    )
+
     temperatures: list[float] = []
-
     for i in range(num_layers):
-        # Center height of this layer
         h = (i + 0.5) * layer_height
-
-        # Below lowest sensor: use lowest sensor temperature
-        if h <= sorted_sensors[0][0]:
-            temperatures.append(sorted_sensors[0][1])
-            continue
-
-        # Above highest sensor: use highest sensor temperature
-        if h >= sorted_sensors[-1][0]:
-            temperatures.append(sorted_sensors[-1][1])
-            continue
-
-        # Between two sensors: linear interpolation
-        for j in range(len(sorted_sensors) - 1):
-            pos_low, temp_low = sorted_sensors[j]
-            pos_high, temp_high = sorted_sensors[j + 1]
-            if pos_low <= h <= pos_high:
-                if pos_high == pos_low:
-                    temperatures.append(temp_low)
-                else:
-                    fraction = (h - pos_low) / (pos_high - pos_low)
-                    temp = temp_low + fraction * (temp_high - temp_low)
-                    temperatures.append(temp)
-                break
+        if h <= xs[0]:
+            temperatures.append(ys[0] + slope_low * (h - xs[0]))
+        elif h >= xs[-1]:
+            temperatures.append(ys[-1] + slope_high * (h - xs[-1]))
+        else:
+            # bisect_right returns insertion index; segment index is idx-1
+            idx = bisect.bisect_right(xs, h) - 1
+            if idx >= n - 1:
+                idx = n - 2
+            temperatures.append(
+                _eval_cubic_spline_segment(h, idx, xs, ys, second_derivs)
+            )
 
     return temperatures
 
