@@ -79,13 +79,10 @@ async def async_setup_entry(
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_PROBE:
             continue
-        if subentry.data.get(CONF_PROBE_ENTITY):
-            # Physical probe already exposed by its source entity — no HA entity here.
-            continue
         probe_device_info = _probe_device_info(entry, subentry)
         async_add_entities(
             [
-                BufferTankVirtualProbeSensor(
+                BufferTankProbeSensor(
                     coordinator, entry, subentry, probe_device_info
                 )
             ],
@@ -105,13 +102,14 @@ def _tank_device_info(entry: ConfigEntry) -> DeviceInfo:
 
 
 def _probe_device_info(entry: ConfigEntry, subentry: ConfigSubentry) -> DeviceInfo:
-    """Return device info for a virtual-probe subentry, linked to the tank."""
+    """Return device info for a probe subentry, linked to the tank."""
     name = subentry.data.get(CONF_PROBE_NAME) or subentry.title
+    model = "Probe" if subentry.data.get(CONF_PROBE_ENTITY) else "Virtual probe"
     return DeviceInfo(
         identifiers={(DOMAIN, f"{entry.entry_id}_probe_{subentry.subentry_id}")},
         name=name,
         manufacturer="Buffer Tank Energy",
-        model="Virtual probe",
+        model=model,
         via_device=(DOMAIN, entry.entry_id),
         entry_type=DeviceEntryType.SERVICE,
     )
@@ -699,8 +697,13 @@ class BufferTankThermoclineSharpnessSensor(_BufferTankEntity):
         return round(data.thermocline.sharpness_k_per_m2, 2)
 
 
-class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], SensorEntity):
-    """Virtual probe that reports an interpolated temperature at a fixed height."""
+class BufferTankProbeSensor(CoordinatorEntity[BufferTankCoordinator], SensorEntity):
+    """Temperature sensor for a probe subentry.
+
+    Reports the source entity's value for physical probes and the
+    interpolated value from the temperature profile for virtual ones —
+    both are prepared by the coordinator under the subentry id.
+    """
 
     _attr_has_entity_name = True
     _attr_device_class = SensorDeviceClass.TEMPERATURE
@@ -715,7 +718,7 @@ class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], Sen
         subentry: ConfigSubentry,
         device_info: DeviceInfo,
     ) -> None:
-        """Initialize a virtual probe entity for a subentry."""
+        """Initialize a probe entity for a subentry."""
         super().__init__(coordinator)
         self._subentry_id = subentry.subentry_id
         self._attr_unique_id = f"{entry.entry_id}_probe_{subentry.subentry_id}"
@@ -724,7 +727,7 @@ class BufferTankVirtualProbeSensor(CoordinatorEntity[BufferTankCoordinator], Sen
 
     @property
     def native_value(self) -> float | None:
-        """Return the interpolated probe temperature."""
+        """Return the probe temperature."""
         data = self.coordinator.data
         if not data or not data.ready:
             return None
