@@ -8,7 +8,7 @@ A [Home Assistant](https://www.home-assistant.io/) custom integration that calcu
 
 ## Features
 
-- **Stored Energy (kWh)** — Total thermal energy stored in the tank, calculated from a 100-layer temperature profile with linear interpolation between sensors.
+- **Stored Energy (kWh)** — Total thermal energy stored in the tank, calculated from a 100-layer temperature profile built with monotone cubic (Fritsch–Carlson PCHIP) interpolation between sensors.
 - **State of Charge (%)** — How full the tank is relative to a configurable maximum temperature.
 - **Charge/Discharge Power (kW)** — Rate of energy change over time, with configurable EMA smoothing to reduce sensor noise.
 - **Heat Loss (W)** — Estimated heat loss through insulation based on R-value, surface area and ambient temperature. Also EMA-smoothed.
@@ -23,7 +23,7 @@ The tank is modeled as a vertical cylinder divided into **100 discrete layers** 
 | Zone | Method |
 |------|--------|
 | Below lowest sensor | Clamped to lowest sensor temperature |
-| Between two sensors | Linear interpolation |
+| Between two sensors | Fritsch–Carlson monotone cubic Hermite (PCHIP) interpolation — C¹-continuous and overshoot-free across sharp thermoclines |
 | Above highest sensor | Clamped to highest sensor temperature |
 
 For each layer, the stored energy is calculated as:
