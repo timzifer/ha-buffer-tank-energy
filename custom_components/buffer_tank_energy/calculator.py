@@ -56,69 +56,104 @@ def _dedupe_sorted_sensors(
     return xs, ys
 
 
-def _natural_cubic_spline_second_derivs(
-    xs: list[float], ys: list[float]
-) -> list[float]:
-    """Solve for the second derivatives at knots of a natural cubic spline.
+def _pchip_tangents(xs: list[float], ys: list[float]) -> list[float]:
+    """Compute Fritsch–Carlson monotone cubic Hermite tangents at each knot.
 
-    Uses the Thomas algorithm on the tridiagonal system arising from the
-    continuity of the first derivative at interior knots, with the natural
-    boundary condition M[0] = M[n-1] = 0.
+    The slopes are chosen so that the resulting piecewise cubic Hermite
+    interpolant is monotone on every segment where the data is monotone,
+    which eliminates the overshoot that a natural cubic spline can produce
+    across a sharp jump (e.g. a thermocline between two probes).
+
+    Reference: F. N. Fritsch and R. E. Carlson, "Monotone piecewise cubic
+    interpolation", SIAM J. Numer. Anal. 17(2), 1980.
     """
     n = len(xs)
-    m = [0.0] * n
-    if n < 3:
-        return m
+    if n < 2:
+        return [0.0] * n
 
     h = [xs[i + 1] - xs[i] for i in range(n - 1)]
+    delta = [(ys[i + 1] - ys[i]) / h[i] for i in range(n - 1)]
 
-    # Tridiagonal system for interior M[1..n-2]
-    lower = [0.0] * (n - 2)
-    diag = [0.0] * (n - 2)
-    upper = [0.0] * (n - 2)
-    rhs = [0.0] * (n - 2)
+    if n == 2:
+        return [delta[0], delta[0]]
+
+    tangents = [0.0] * n
+
     for i in range(1, n - 1):
-        k = i - 1
-        lower[k] = h[i - 1]
-        diag[k] = 2.0 * (h[i - 1] + h[i])
-        upper[k] = h[i]
-        rhs[k] = 6.0 * (
-            (ys[i + 1] - ys[i]) / h[i] - (ys[i] - ys[i - 1]) / h[i - 1]
-        )
+        d_prev = delta[i - 1]
+        d_next = delta[i]
+        if d_prev * d_next <= 0.0:
+            # Sign change or flat segment → local extremum, enforce zero slope.
+            tangents[i] = 0.0
+        else:
+            w1 = 2.0 * h[i] + h[i - 1]
+            w2 = h[i] + 2.0 * h[i - 1]
+            tangents[i] = (w1 + w2) / (w1 / d_prev + w2 / d_next)
 
-    # Forward sweep
-    for k in range(1, n - 2):
-        factor = lower[k] / diag[k - 1]
-        diag[k] -= factor * upper[k - 1]
-        rhs[k] -= factor * rhs[k - 1]
+    # One-sided, monotonicity-safe estimate at the left boundary.
+    t0 = ((2.0 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (h[0] + h[1])
+    if t0 * delta[0] <= 0.0:
+        t0 = 0.0
+    elif delta[0] * delta[1] <= 0.0 and abs(t0) > abs(3.0 * delta[0]):
+        t0 = 3.0 * delta[0]
+    tangents[0] = t0
 
-    # Back substitution
-    interior = [0.0] * (n - 2)
-    interior[-1] = rhs[-1] / diag[-1]
-    for k in range(n - 4, -1, -1):
-        interior[k] = (rhs[k] - upper[k] * interior[k + 1]) / diag[k]
+    # One-sided, monotonicity-safe estimate at the right boundary.
+    tn = (
+        (2.0 * h[-1] + h[-2]) * delta[-1] - h[-1] * delta[-2]
+    ) / (h[-1] + h[-2])
+    if tn * delta[-1] <= 0.0:
+        tn = 0.0
+    elif delta[-1] * delta[-2] <= 0.0 and abs(tn) > abs(3.0 * delta[-1]):
+        tn = 3.0 * delta[-1]
+    tangents[-1] = tn
 
-    for i, value in enumerate(interior, start=1):
-        m[i] = value
-    return m
+    return tangents
 
 
-def _eval_cubic_spline_segment(
+def _eval_hermite_segment(
     x: float,
     i: int,
     xs: list[float],
     ys: list[float],
-    m: list[float],
+    tangents: list[float],
 ) -> float:
-    """Evaluate the natural cubic spline on segment [xs[i], xs[i+1]]."""
+    """Evaluate the cubic Hermite polynomial on segment [xs[i], xs[i+1]]."""
     h = xs[i + 1] - xs[i]
-    a = xs[i + 1] - x
-    b = x - xs[i]
+    t = (x - xs[i]) / h
+    t2 = t * t
+    t3 = t2 * t
+    h00 = 2.0 * t3 - 3.0 * t2 + 1.0
+    h10 = t3 - 2.0 * t2 + t
+    h01 = -2.0 * t3 + 3.0 * t2
+    h11 = t3 - t2
     return (
-        m[i] * a**3 / (6.0 * h)
-        + m[i + 1] * b**3 / (6.0 * h)
-        + (ys[i] / h - m[i] * h / 6.0) * a
-        + (ys[i + 1] / h - m[i + 1] * h / 6.0) * b
+        h00 * ys[i]
+        + h10 * h * tangents[i]
+        + h01 * ys[i + 1]
+        + h11 * h * tangents[i + 1]
+    )
+
+
+def _eval_hermite_segment_derivative(
+    x: float,
+    i: int,
+    xs: list[float],
+    ys: list[float],
+    tangents: list[float],
+) -> float:
+    """Analytic first derivative of the cubic Hermite polynomial."""
+    h = xs[i + 1] - xs[i]
+    t = (x - xs[i]) / h
+    dh00 = 6.0 * t * t - 6.0 * t
+    dh10 = 3.0 * t * t - 4.0 * t + 1.0
+    dh01 = -6.0 * t * t + 6.0 * t
+    dh11 = 3.0 * t * t - 2.0 * t
+    return (
+        dh00 * ys[i] / h
+        + dh10 * tangents[i]
+        + dh01 * ys[i + 1] / h
+        + dh11 * tangents[i + 1]
     )
 
 
@@ -127,12 +162,15 @@ def interpolate_temperature_profile(
     tank_height_m: float,
     num_layers: int = NUM_LAYERS,
 ) -> list[float]:
-    """Build a temperature profile using a natural cubic spline.
+    """Build a temperature profile using Fritsch–Carlson monotone PCHIP.
 
-    The spline is C1‑continuous, so temperature and slope match at every
-    sensor knot. Below the lowest and above the highest sensor the profile
-    is extended linearly using the spline's slope at the respective
-    boundary knot.
+    The interpolant is C¹-continuous and monotone on every segment where the
+    data is monotone, so it cannot overshoot between two probes (unlike a
+    natural cubic spline, which can generate unphysical peaks across a sharp
+    thermocline). Outside the sensor range the profile is clamped to the
+    nearest probe temperature, matching the physical assumption that the
+    topmost and bottommost layers of a stratified tank sit at approximately
+    the temperature of the closest probe.
 
     Args:
         sensors: List of (position_m, temperature_celsius).
@@ -152,61 +190,25 @@ def interpolate_temperature_profile(
     if n == 1:
         return [ys[0]] * num_layers
 
-    if n == 2:
-        slope = (ys[1] - ys[0]) / (xs[1] - xs[0])
-
-        def evaluate(h: float) -> float:
-            return ys[0] + slope * (h - xs[0])
-
-        return [evaluate((i + 0.5) * layer_height) for i in range(num_layers)]
-
-    second_derivs = _natural_cubic_spline_second_derivs(xs, ys)
-
-    h0 = xs[1] - xs[0]
-    h_last = xs[-1] - xs[-2]
-    slope_low = (ys[1] - ys[0]) / h0 - h0 / 6.0 * (
-        2.0 * second_derivs[0] + second_derivs[1]
-    )
-    slope_high = (ys[-1] - ys[-2]) / h_last + h_last / 6.0 * (
-        second_derivs[-2] + 2.0 * second_derivs[-1]
-    )
+    tangents = _pchip_tangents(xs, ys)
 
     temperatures: list[float] = []
     for i in range(num_layers):
         h = (i + 0.5) * layer_height
         if h <= xs[0]:
-            temperatures.append(ys[0] + slope_low * (h - xs[0]))
+            temperatures.append(ys[0])
         elif h >= xs[-1]:
-            temperatures.append(ys[-1] + slope_high * (h - xs[-1]))
+            temperatures.append(ys[-1])
         else:
             # bisect_right returns insertion index; segment index is idx-1
             idx = bisect.bisect_right(xs, h) - 1
             if idx >= n - 1:
                 idx = n - 2
             temperatures.append(
-                _eval_cubic_spline_segment(h, idx, xs, ys, second_derivs)
+                _eval_hermite_segment(h, idx, xs, ys, tangents)
             )
 
     return temperatures
-
-
-def _eval_cubic_spline_segment_derivative(
-    x: float,
-    i: int,
-    xs: list[float],
-    ys: list[float],
-    m: list[float],
-) -> float:
-    """Analytic first derivative of the natural cubic spline on [xs[i], xs[i+1]]."""
-    h = xs[i + 1] - xs[i]
-    a = xs[i + 1] - x
-    b = x - xs[i]
-    return (
-        -m[i] * a * a / (2.0 * h)
-        + m[i + 1] * b * b / (2.0 * h)
-        - (ys[i] / h - m[i] * h / 6.0)
-        + (ys[i + 1] / h - m[i + 1] * h / 6.0)
-    )
 
 
 @dataclass
@@ -226,10 +228,11 @@ def sample_temperature_profile(
 ) -> TemperatureSamples | None:
     """Sample T(z) and dT/dz uniformly along the tank height.
 
-    The sampler uses the same natural cubic spline as the energy calculation
-    but evaluates it on a finer grid and returns the analytic derivative so
-    that stratification and thermocline metrics can be computed directly from
-    the continuous profile.
+    Uses the same PCHIP interpolant as ``interpolate_temperature_profile``
+    on a finer grid and returns the analytic derivative so that
+    stratification and thermocline metrics are consistent with the rendered
+    profile. Outside the sensor range the profile is clamped (gradient = 0)
+    to avoid unphysical extrapolation.
     """
     if not sensors or tank_height_m <= 0 or num_samples < 2:
         return None
@@ -250,44 +253,26 @@ def sample_temperature_profile(
             tank_height_m=tank_height_m,
         )
 
-    if n == 2:
-        slope = (ys[1] - ys[0]) / (xs[1] - xs[0])
-        temps = [ys[0] + slope * (z - xs[0]) for z in positions]
-        return TemperatureSamples(
-            positions_m=positions,
-            temperatures=temps,
-            gradients_k_per_m=[slope] * num_samples,
-            tank_height_m=tank_height_m,
-        )
-
-    second_derivs = _natural_cubic_spline_second_derivs(xs, ys)
-    h0 = xs[1] - xs[0]
-    h_last = xs[-1] - xs[-2]
-    slope_low = (ys[1] - ys[0]) / h0 - h0 / 6.0 * (
-        2.0 * second_derivs[0] + second_derivs[1]
-    )
-    slope_high = (ys[-1] - ys[-2]) / h_last + h_last / 6.0 * (
-        second_derivs[-2] + 2.0 * second_derivs[-1]
-    )
+    tangents = _pchip_tangents(xs, ys)
 
     temperatures: list[float] = []
     gradients: list[float] = []
     for z in positions:
         if z <= xs[0]:
-            temperatures.append(ys[0] + slope_low * (z - xs[0]))
-            gradients.append(slope_low)
+            temperatures.append(ys[0])
+            gradients.append(0.0)
         elif z >= xs[-1]:
-            temperatures.append(ys[-1] + slope_high * (z - xs[-1]))
-            gradients.append(slope_high)
+            temperatures.append(ys[-1])
+            gradients.append(0.0)
         else:
             idx = bisect.bisect_right(xs, z) - 1
             if idx >= n - 1:
                 idx = n - 2
             temperatures.append(
-                _eval_cubic_spline_segment(z, idx, xs, ys, second_derivs)
+                _eval_hermite_segment(z, idx, xs, ys, tangents)
             )
             gradients.append(
-                _eval_cubic_spline_segment_derivative(z, idx, xs, ys, second_derivs)
+                _eval_hermite_segment_derivative(z, idx, xs, ys, tangents)
             )
 
     return TemperatureSamples(
