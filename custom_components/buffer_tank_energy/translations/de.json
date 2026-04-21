@@ -63,13 +63,15 @@
             "name": "Name",
             "position": "Position (vom Boden)",
             "entity_id": "Temperatursensor (optional)",
-            "ema_smoothing": "Glättung (virtuelle Sonde)"
+            "ema_smoothing": "Glättung (virtuelle Sonde)",
+            "role": "Rolle (Darstellung)"
           },
           "data_description": {
             "name": "Anzeigename für diese Sonde.",
             "position": "Vertikale Position der Sonde in Millimetern, gemessen vom Boden des Tanks.",
             "entity_id": "Sensor, der die Temperatur an dieser Position liefert. Leer lassen für eine virtuelle Sonde.",
-            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter. Wird bei physischen Sonden ignoriert."
+            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter. Wird bei physischen Sonden ignoriert.",
+            "role": "Wie diese Sonde in Frontend-Karten dargestellt wird: als Messpunkt (Sensor) oder als Tankanschluss (Outlet)."
           }
         },
         "reconfigure": {
@@ -79,13 +81,15 @@
             "name": "Name",
             "position": "Position (vom Boden)",
             "entity_id": "Temperatursensor (optional)",
-            "ema_smoothing": "Glättung (virtuelle Sonde)"
+            "ema_smoothing": "Glättung (virtuelle Sonde)",
+            "role": "Rolle (Darstellung)"
           },
           "data_description": {
             "name": "Anzeigename für diese Sonde.",
             "position": "Vertikale Position der Sonde in Millimetern.",
             "entity_id": "Sensor, der die Temperatur liefert. Leer lassen für eine virtuelle Sonde.",
-            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter."
+            "ema_smoothing": "EMA-Alpha zur Glättung der virtuellen Sonde. 1,0 = keine Glättung, niedriger = glatter.",
+            "role": "Wie diese Sonde in Frontend-Karten dargestellt wird: als Messpunkt (Sensor) oder als Tankanschluss (Outlet)."
           }
         }
       },
@@ -132,6 +136,14 @@
       },
       "abort": {
         "no_probes": "Lege mindestens eine Sonde an, bevor du einen Schwellwert erstellst."
+      }
+    }
+  },
+  "selector": {
+    "role": {
+      "options": {
+        "sensor": "Sensor",
+        "outlet": "Outlet"
       }
     }
   },
