@@ -33,11 +33,14 @@ from .const import (
     CONF_MAX_TEMPERATURE,
     CONF_PROBE_ENTITY,
     CONF_PROBE_POSITION,
+    CONF_PROBE_ROLE,
     CONF_RETURN_TEMP_ENTITY,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
     DEFAULT_MAX_TEMPERATURE,
+    DEFAULT_PROBE_ROLE,
     DOMAIN,
+    PROBE_ROLES,
     SUBENTRY_PROBE,
 )
 
@@ -52,6 +55,7 @@ class ProbeConfig:
     name: str
     position_m: float
     entity_id: str | None  # None = virtual probe (interpolated)
+    role: str = DEFAULT_PROBE_ROLE  # "sensor" or "outlet" — display hint
 
 
 @dataclass
@@ -104,12 +108,16 @@ class BufferTankCoordinator(DataUpdateCoordinator[CoordinatorData]):
             data = subentry.data
             position_mm = float(data[CONF_PROBE_POSITION])
             entity_id = data.get(CONF_PROBE_ENTITY) or None
+            role = data.get(CONF_PROBE_ROLE, DEFAULT_PROBE_ROLE)
+            if role not in PROBE_ROLES:
+                role = DEFAULT_PROBE_ROLE
             probes.append(
                 ProbeConfig(
                     subentry_id=subentry_id,
                     name=subentry.title,
                     position_m=position_mm / 1000.0,
                     entity_id=entity_id,
+                    role=role,
                 )
             )
         probes.sort(key=lambda p: p.position_m)

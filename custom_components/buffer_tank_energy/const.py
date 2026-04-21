@@ -26,6 +26,12 @@ CONF_PROBE_NAME = "name"
 CONF_PROBE_POSITION = "position"  # mm from bottom
 CONF_PROBE_ENTITY = "entity_id"  # optional — empty means virtual probe
 CONF_PROBE_EMA_SMOOTHING = "ema_smoothing"  # EMA alpha for virtual probe smoothing
+CONF_PROBE_ROLE = "role"  # "sensor" or "outlet" — display hint for virtual probes
+
+# Probe roles (display hint for frontend cards)
+PROBE_ROLE_SENSOR = "sensor"
+PROBE_ROLE_OUTLET = "outlet"
+PROBE_ROLES = (PROBE_ROLE_SENSOR, PROBE_ROLE_OUTLET)
 
 # Threshold subentry keys
 CONF_THRESHOLD_NAME = "name"
@@ -41,6 +47,7 @@ LEGACY_CONF_SENSOR_POSITION = "sensor_position"
 DEFAULT_MAX_TEMPERATURE = 80.0  # °C
 DEFAULT_EMA_SMOOTHING = 0.2  # Good balance of noise damping and responsiveness
 DEFAULT_PROBE_EMA_SMOOTHING = 1.0  # 1.0 = no smoothing, passes raw value through
+DEFAULT_PROBE_ROLE = PROBE_ROLE_SENSOR
 DEFAULT_THRESHOLD_HYSTERESIS = 2.0  # K
 
 # Physics constants

@@ -307,6 +307,7 @@ class BufferTankStateOfChargeSensor(_BufferTankEntity):
                     ),
                     "virtual": p.entity_id is None,
                     "entity_id": p.entity_id,
+                    "role": p.role,
                 }
                 for p in reversed(self.coordinator.probes)
             ],

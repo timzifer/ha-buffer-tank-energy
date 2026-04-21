@@ -35,6 +35,7 @@ from .const import (
     CONF_PROBE_ENTITY,
     CONF_PROBE_NAME,
     CONF_PROBE_POSITION,
+    CONF_PROBE_ROLE,
     CONF_RETURN_TEMP_ENTITY,
     CONF_TANK_HEIGHT,
     CONF_TANK_VOLUME,
@@ -46,8 +47,10 @@ from .const import (
     DEFAULT_EMA_SMOOTHING,
     DEFAULT_MAX_TEMPERATURE,
     DEFAULT_PROBE_EMA_SMOOTHING,
+    DEFAULT_PROBE_ROLE,
     DEFAULT_THRESHOLD_HYSTERESIS,
     DOMAIN,
+    PROBE_ROLES,
     SUBENTRY_PROBE,
     SUBENTRY_THRESHOLD,
 )
@@ -250,6 +253,7 @@ class ProbeSubentryFlow(ConfigSubentryFlow):
                     CONF_PROBE_POSITION: position,
                     CONF_PROBE_ENTITY: user_input.get(CONF_PROBE_ENTITY) or None,
                     CONF_PROBE_EMA_SMOOTHING: user_input[CONF_PROBE_EMA_SMOOTHING],
+                    CONF_PROBE_ROLE: user_input[CONF_PROBE_ROLE],
                 }
                 title = clean[CONF_PROBE_NAME]
                 if reconfigure:
@@ -299,6 +303,18 @@ class ProbeSubentryFlow(ConfigSubentryFlow):
                         max=1.0,
                         step=0.05,
                         mode=NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Required(
+                    CONF_PROBE_ROLE,
+                    default=defaults.get(CONF_PROBE_ROLE, DEFAULT_PROBE_ROLE),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            {"value": role, "label": role} for role in PROBE_ROLES
+                        ],
+                        mode=SelectSelectorMode.DROPDOWN,
+                        translation_key=CONF_PROBE_ROLE,
                     )
                 ),
             }
